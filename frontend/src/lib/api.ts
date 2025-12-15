@@ -30,9 +30,22 @@ async function apiFetch<T>(
     headers['Content-Type'] = 'application/json';
   }
 
+  console.log('API Request:', {
+    url: `${API_BASE}${endpoint}`,
+    method: fetchOptions.method || 'GET',
+    headers,
+    body: fetchOptions.body,
+  });
+
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...fetchOptions,
     headers,
+  });
+
+  console.log('API Response:', {
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok,
   });
 
   if (response.status === 401) {
@@ -43,6 +56,7 @@ async function apiFetch<T>(
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'Request failed' }));
+    console.error('API Error:', error);
     throw new Error(error.detail || `Request failed: ${response.status}`);
   }
 

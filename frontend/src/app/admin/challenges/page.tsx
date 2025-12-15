@@ -45,12 +45,16 @@ export default function ChallengesPage() {
     setCreating(true);
     setError('');
 
+    console.log('Creating challenge with data:', { title, description, is_active: isActive });
+
     try {
-      await adminApi.createChallenge({
+      const result = await adminApi.createChallenge({
         title,
         description: description || undefined,
         is_active: isActive,
       });
+
+      console.log('Challenge created successfully:', result);
 
       // Reset form
       setTitle('');
@@ -61,6 +65,7 @@ export default function ChallengesPage() {
       // Reload challenges
       await loadChallenges();
     } catch (err) {
+      console.error('Error creating challenge:', err);
       setError(err instanceof Error ? err.message : 'Failed to create challenge');
     } finally {
       setCreating(false);
