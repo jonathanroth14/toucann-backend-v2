@@ -31,27 +31,23 @@ async function apiFetch<T>(
     headers['Content-Type'] = 'application/json';
   }
 
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔵 API Request:', {
-      url: `${API_BASE}${endpoint}`,
-      method: fetchOptions.method || 'GET',
-      hasAuth: !!headers['Authorization'],
-      body: fetchOptions.body ? JSON.parse(fetchOptions.body as string) : undefined,
-    });
-  }
+  console.log('🔵 API Request:', {
+    url: `${API_BASE}${endpoint}`,
+    method: fetchOptions.method || 'GET',
+    hasAuth: !!headers['Authorization'],
+    body: fetchOptions.body ? JSON.parse(fetchOptions.body as string) : undefined,
+  });
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...fetchOptions,
     headers,
   });
 
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔵 API Response:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-    });
-  }
+  console.log('🔵 API Response:', {
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok,
+  });
 
   if (response.status === 401) {
     auth.clearToken();
@@ -73,6 +69,13 @@ async function apiFetch<T>(
       errorData = { detail: `Request failed with status ${response.status}` };
     }
 
+    // Always log errors even in production
+    console.error('❌ API Error:', {
+      endpoint,
+      status: response.status,
+      errorData,
+    });
+
     logApiError(endpoint, errorData, response);
 
     // Throw the full error object so we can format it properly in the UI
@@ -83,9 +86,7 @@ async function apiFetch<T>(
 
   const data = await response.json();
 
-  if (process.env.NODE_ENV === 'development') {
-    console.log('✅ API Success:', data);
-  }
+  console.log('✅ API Success:', data);
 
   return data;
 }
