@@ -19,7 +19,9 @@ async function apiFetch<T>(
 
   if (requiresAuth) {
     const token = auth.getToken();
+    console.log('🔑 Token from localStorage:', token ? `${token.substring(0, 20)}...` : 'NULL');
     if (!token) {
+      console.error('❌ No token found - redirecting to login');
       window.location.href = '/login';
       throw new Error('Not authenticated');
     }
@@ -34,7 +36,10 @@ async function apiFetch<T>(
   console.log('🔵 API Request:', {
     url: `${API_BASE}${endpoint}`,
     method: fetchOptions.method || 'GET',
-    hasAuth: !!headers['Authorization'],
+    headers: {
+      'Content-Type': headers['Content-Type'] || 'none',
+      'Authorization': headers['Authorization'] ? 'Bearer ***' : 'none',
+    },
     body: fetchOptions.body ? JSON.parse(fetchOptions.body as string) : undefined,
   });
 
@@ -69,11 +74,14 @@ async function apiFetch<T>(
       errorData = { detail: `Request failed with status ${response.status}` };
     }
 
-    // Always log errors even in production
-    console.error('❌ API Error:', {
+    // Always log errors even in production with full details
+    console.error('❌ API Error Response:', {
       endpoint,
+      method: fetchOptions.method || 'GET',
       status: response.status,
-      errorData,
+      statusText: response.statusText,
+      contentType,
+      errorData: JSON.stringify(errorData, null, 2),
     });
 
     logApiError(endpoint, errorData, response);

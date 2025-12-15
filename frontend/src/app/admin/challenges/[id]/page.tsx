@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { adminApi } from '@/lib/api';
+import { formatApiError } from '@/lib/errors';
 
 interface Objective {
   id: number;
@@ -55,7 +56,7 @@ export default function ChallengeDetailPage() {
       const data = await adminApi.getChallenge(challengeId);
       setChallenge(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load challenge');
+      setError(formatApiError(err));
     } finally {
       setLoading(false);
     }
@@ -86,7 +87,7 @@ export default function ChallengeDetailPage() {
       // Reload challenge
       await loadChallenge();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create objective');
+      setError(formatApiError(err));
     } finally {
       setCreatingObj(false);
     }
@@ -103,7 +104,7 @@ export default function ChallengeDetailPage() {
       setShowLinkForm(false);
       alert('Challenge linked successfully!');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to link challenge');
+      setError(formatApiError(err));
     } finally {
       setLinking(false);
     }
@@ -154,7 +155,7 @@ export default function ChallengeDetailPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 whitespace-pre-wrap">
           {error}
         </div>
       )}
