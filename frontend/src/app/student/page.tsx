@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { studentApi } from '@/lib/api';
+import { formatApiError } from '@/lib/errors';
 
 interface Objective {
   id: number;
@@ -38,7 +39,7 @@ export default function StudentPage() {
       setChallenge(data);
       setError('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load challenge');
+      setError(formatApiError(err));
     } finally {
       setLoading(false);
     }
@@ -53,7 +54,7 @@ export default function StudentPage() {
       // Reload active challenge to get updated state
       await loadActiveChallenge();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to complete objective');
+      setError(formatApiError(err));
     } finally {
       setCompletingObj(null);
     }
@@ -70,7 +71,7 @@ export default function StudentPage() {
   if (error && !challenge) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded whitespace-pre-wrap">
           {error}
         </div>
       </div>
@@ -137,7 +138,7 @@ export default function StudentPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4 whitespace-pre-wrap">
           {error}
         </div>
       )}
