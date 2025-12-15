@@ -1,7 +1,7 @@
 """Add challenges and admin system
 
 Revision ID: 001_add_challenges
-Revises:
+Revises: 000_initial_schema
 Create Date: 2025-12-15
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = '001_add_challenges'
-down_revision = None
+down_revision = '000_initial_schema'
 branch_labels = None
 depends_on = None
 
