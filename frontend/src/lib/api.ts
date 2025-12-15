@@ -1,4 +1,5 @@
 import { auth } from './auth';
+import { logApiError } from './errors';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
 
@@ -30,37 +31,63 @@ async function apiFetch<T>(
     headers['Content-Type'] = 'application/json';
   }
 
-  console.log('API Request:', {
-    url: `${API_BASE}${endpoint}`,
-    method: fetchOptions.method || 'GET',
-    headers,
-    body: fetchOptions.body,
-  });
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔵 API Request:', {
+      url: `${API_BASE}${endpoint}`,
+      method: fetchOptions.method || 'GET',
+      hasAuth: !!headers['Authorization'],
+      body: fetchOptions.body ? JSON.parse(fetchOptions.body as string) : undefined,
+    });
+  }
 
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...fetchOptions,
     headers,
   });
 
-  console.log('API Response:', {
-    status: response.status,
-    statusText: response.statusText,
-    ok: response.ok,
-  });
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔵 API Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok,
+    });
+  }
 
   if (response.status === 401) {
     auth.clearToken();
     window.location.href = '/login';
-    throw new Error('Unauthorized');
+    throw new Error('Unauthorized - please login again');
   }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Request failed' }));
-    console.error('API Error:', error);
-    throw new Error(error.detail || `Request failed: ${response.status}`);
+    let errorData: any;
+    const contentType = response.headers.get('content-type');
+
+    try {
+      if (contentType && contentType.includes('application/json')) {
+        errorData = await response.json();
+      } else {
+        errorData = { detail: await response.text() };
+      }
+    } catch (e) {
+      errorData = { detail: `Request failed with status ${response.status}` };
+    }
+
+    logApiError(endpoint, errorData, response);
+
+    // Throw the full error object so we can format it properly in the UI
+    const error = new Error(typeof errorData.detail === 'string' ? errorData.detail : 'Request failed');
+    (error as any).data = errorData;
+    throw error;
   }
 
-  return response.json();
+  const data = await response.json();
+
+  if (process.env.NODE_ENV === 'development') {
+    console.log('✅ API Success:', data);
+  }
+
+  return data;
 }
 
 // Auth API
