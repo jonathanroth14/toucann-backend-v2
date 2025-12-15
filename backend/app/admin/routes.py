@@ -59,6 +59,16 @@ def generate_temp_password(length: int = 12) -> str:
 
 
 # Challenge Management
+@router.get("/challenges", response_model=list[ChallengeResponse])
+async def list_challenges(
+    current_admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """List all challenges (admin only)"""
+    challenges = db.query(Challenge).order_by(Challenge.id).all()
+    return challenges
+
+
 @router.post("/challenges", response_model=ChallengeResponse, status_code=status.HTTP_201_CREATED)
 async def create_challenge(
     challenge_data: ChallengeCreate,
