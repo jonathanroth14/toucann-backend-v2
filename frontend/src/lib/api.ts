@@ -12,8 +12,8 @@ async function apiFetch<T>(
 ): Promise<T> {
   const { requiresAuth = false, ...fetchOptions } = options;
 
-  const headers: HeadersInit = {
-    ...fetchOptions.headers,
+  const headers: Record<string, string> = {
+    ...(fetchOptions.headers as Record<string, string> || {}),
   };
 
   if (requiresAuth) {
