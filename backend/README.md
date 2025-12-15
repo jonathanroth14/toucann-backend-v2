@@ -77,6 +77,26 @@ The API will be available at `http://localhost:8000`
 - `PUT /users/profile` - Update user profile
 - `DELETE /users/profile` - Delete user profile
 
+### Challenges (Student-facing)
+
+- `GET /me/active-challenge` - Get current active challenge with objectives and progress
+- `POST /me/objectives/{objective_id}/complete` - Mark objective as complete
+
+### Admin (Requires admin access)
+
+**Challenge Management:**
+- `POST /admin/challenges` - Create a challenge
+- `PUT /admin/challenges/{challenge_id}` - Update a challenge
+- `GET /admin/challenges/{challenge_id}` - Get challenge with objectives
+- `POST /admin/challenges/{challenge_id}/objectives` - Create objective
+- `PUT /admin/objectives/{objective_id}` - Update objective
+- `POST /admin/challenges/{challenge_id}/link-next` - Link next challenge
+
+**User Management:**
+- `GET /admin/users` - List all users
+- `GET /admin/users/{user_id}/activity` - Get user activity and progress
+- `POST /admin/users/{user_id}/reset-password` - Reset user password
+
 ### General
 
 - `GET /health` - Health check endpoint
@@ -100,6 +120,44 @@ The API will be available at `http://localhost:8000`
 - `role` - User role (student, guardian, advisor, school_admin)
 - `expected_grad_year` - Expected graduation year
 - `newsletter_opt_in` - Newsletter subscription preference
+
+### Challenge
+- `id` - Primary key
+- `title` - Challenge title
+- `description` - Challenge description
+- `is_active` - Whether challenge is active
+- `created_by` - Foreign key to User (admin who created it)
+- `created_at` - Creation timestamp
+
+### Objective
+- `id` - Primary key
+- `challenge_id` - Foreign key to Challenge
+- `title` - Objective title
+- `description` - Objective description
+- `points` - Points awarded for completion
+- `sort_order` - Display order
+- `is_required` - Whether objective is required to complete challenge
+
+### ChallengeLink
+- `id` - Primary key
+- `from_challenge_id` - Foreign key to Challenge
+- `to_challenge_id` - Foreign key to Challenge (next challenge)
+- `condition` - Trigger condition (e.g., "ON_COMPLETE")
+
+### UserChallengeProgress
+- `id` - Primary key
+- `user_id` - Foreign key to User
+- `challenge_id` - Foreign key to Challenge
+- `status` - Progress status (NOT_STARTED, IN_PROGRESS, COMPLETE)
+- `started_at` - When user started
+- `completed_at` - When user completed
+
+### UserObjectiveProgress
+- `id` - Primary key
+- `user_id` - Foreign key to User
+- `objective_id` - Foreign key to Objective
+- `status` - Completion status (INCOMPLETE, COMPLETE)
+- `completed_at` - When user completed
 
 ## Deployment
 
@@ -126,6 +184,20 @@ After modifying models:
 ```bash
 alembic revision --autogenerate -m "Description of changes"
 alembic upgrade head
+```
+
+### Promoting a User to Admin
+
+To promote a user to admin, connect to your database and run:
+
+```sql
+UPDATE users SET is_admin = true WHERE email = 'admin@example.com';
+```
+
+Or using psql:
+
+```bash
+psql $DATABASE_URL -c "UPDATE users SET is_admin = true WHERE email = 'admin@example.com';"
 ```
 
 ### Running Tests

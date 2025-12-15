@@ -11,6 +11,13 @@ from alembic import context
 # Import all models
 from app.auth.models import Base
 from app.users.models import Profile
+from app.challenges.models import (
+    Challenge,
+    Objective,
+    ChallengeLink,
+    UserChallengeProgress,
+    UserObjectiveProgress,
+)
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
