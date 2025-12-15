@@ -3,10 +3,13 @@ Common Dependencies
 """
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from typing import Generator
+from typing import Generator, TYPE_CHECKING
 from fastapi import Depends, HTTPException, status
 
 from app.config import get_settings
+
+if TYPE_CHECKING:
+    from app.auth.models import User
 
 settings = get_settings()
 
@@ -33,16 +36,21 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-async def require_admin(current_user=Depends(None)):
+def _get_current_active_user_dependency():
+    """Helper to avoid circular import at module level"""
+    from app.auth.utils import get_current_active_user
+    return get_current_active_user
+
+
+async def require_admin(current_user: "User" = Depends(_get_current_active_user_dependency())):
     """
     Dependency to require admin access
     Usage in routes: current_admin = Depends(require_admin)
-    """
-    from app.auth.utils import get_current_active_user
 
-    # Get current user if not already provided
-    if current_user is None:
-        current_user = await get_current_active_user()
+    This properly uses FastAPI's dependency injection to get the current user
+    and validates they have admin privileges.
+    """
+    from app.auth.models import User
 
     # Check if user is admin
     if not current_user.is_admin:
