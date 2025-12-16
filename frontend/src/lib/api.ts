@@ -178,6 +178,27 @@ export const adminApi = {
     });
   },
 
+  async updateChallenge(id: number, data: { title?: string; description?: string; is_active?: boolean }) {
+    return apiFetch<{
+      id: number;
+      title: string;
+      description: string | null;
+      is_active: boolean;
+      created_at: string;
+    }>(`/admin/challenges/${id}`, {
+      method: 'PUT',
+      requiresAuth: true,
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteChallenge(id: number) {
+    return apiFetch<{ ok: boolean; message: string }>(`/admin/challenges/${id}`, {
+      method: 'DELETE',
+      requiresAuth: true,
+    });
+  },
+
   async createObjective(
     challengeId: number,
     data: {

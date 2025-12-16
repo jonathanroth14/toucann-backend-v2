@@ -148,6 +148,31 @@ async def get_challenge(
     )
 
 
+@router.delete("/challenges/{challenge_id}")
+async def delete_challenge(
+    challenge_id: int,
+    current_admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Delete a challenge (admin only)"""
+    challenge = db.query(Challenge).filter(Challenge.id == challenge_id).first()
+    if not challenge:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Challenge not found",
+        )
+
+    # SQLAlchemy will handle cascade deletes for:
+    # - objectives (cascade="all, delete-orphan")
+    # - challenge_links (cascade="all, delete-orphan")
+    # - user_challenge_progress (cascade="all, delete-orphan")
+    # And objectives will cascade delete user_objective_progress
+    db.delete(challenge)
+    db.commit()
+
+    return {"ok": True, "message": f"Challenge '{challenge.title}' deleted successfully"}
+
+
 # Objective Management
 @router.post("/challenges/{challenge_id}/objectives", response_model=ObjectiveResponse, status_code=status.HTTP_201_CREATED)
 async def create_objective(
