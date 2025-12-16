@@ -63,7 +63,13 @@ class ChallengeBase(BaseModel):
 class ChallengeCreate(ChallengeBase):
     """Schema for creating a challenge"""
 
-    pass
+    goal_id: Optional[int] = None
+    next_challenge_id: Optional[int] = None
+    sort_order: int = 0
+    visible_to_students: bool = True
+    points: int = 10
+    category: Optional[str] = None
+    due_date: Optional[datetime] = None
 
 
 class ChallengeUpdate(BaseModel):
@@ -72,6 +78,13 @@ class ChallengeUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     is_active: Optional[bool] = None
+    goal_id: Optional[int] = None
+    next_challenge_id: Optional[int] = None
+    sort_order: Optional[int] = None
+    visible_to_students: Optional[bool] = None
+    points: Optional[int] = None
+    category: Optional[str] = None
+    due_date: Optional[datetime] = None
 
 
 class ChallengeResponse(ChallengeBase):
@@ -80,6 +93,13 @@ class ChallengeResponse(ChallengeBase):
     id: int
     created_by: Optional[int] = None
     created_at: datetime
+    goal_id: Optional[int] = None
+    next_challenge_id: Optional[int] = None
+    sort_order: int = 0
+    visible_to_students: bool = True
+    points: int = 10
+    category: Optional[str] = None
+    due_date: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 
