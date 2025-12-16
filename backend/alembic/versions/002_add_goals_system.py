@@ -1,7 +1,7 @@
 """add goals system
 
 Revision ID: 002_add_goals_system
-Revises: 001_add_challenges_system
+Revises: 001_add_challenges
 Create Date: 2024-01-01 00:00:00
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '002_add_goals_system'
-down_revision = '001_add_challenges_system'
+down_revision = '001_add_challenges'
 branch_labels = None
 depends_on = None
 
