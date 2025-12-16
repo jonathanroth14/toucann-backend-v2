@@ -170,7 +170,18 @@ export const adminApi = {
     });
   },
 
-  async createChallenge(data: { title: string; description?: string; is_active: boolean }) {
+  async createChallenge(data: {
+    title: string;
+    description?: string;
+    is_active: boolean;
+    goal_id?: number;
+    next_challenge_id?: number;
+    sort_order?: number;
+    visible_to_students?: boolean;
+    points?: number;
+    category?: string;
+    due_date?: string;
+  }) {
     return apiFetch<{ id: number; title: string }>('/admin/challenges', {
       method: 'POST',
       requiresAuth: true,
@@ -178,13 +189,31 @@ export const adminApi = {
     });
   },
 
-  async updateChallenge(id: number, data: { title?: string; description?: string; is_active?: boolean }) {
+  async updateChallenge(id: number, data: {
+    title?: string;
+    description?: string;
+    is_active?: boolean;
+    goal_id?: number;
+    next_challenge_id?: number;
+    sort_order?: number;
+    visible_to_students?: boolean;
+    points?: number;
+    category?: string;
+    due_date?: string;
+  }) {
     return apiFetch<{
       id: number;
       title: string;
       description: string | null;
       is_active: boolean;
       created_at: string;
+      goal_id: number | null;
+      next_challenge_id: number | null;
+      sort_order: number;
+      visible_to_students: boolean;
+      points: number;
+      category: string | null;
+      due_date: string | null;
     }>(`/admin/challenges/${id}`, {
       method: 'PUT',
       requiresAuth: true,
@@ -227,6 +256,50 @@ export const adminApi = {
 
 // Student API
 export const studentApi = {
+  async getTodayTask() {
+    return apiFetch<{
+      current_goal: {
+        id: number;
+        title: string;
+        description: string | null;
+      } | null;
+      current_challenge: {
+        id: number;
+        title: string;
+        description: string | null;
+        points: number;
+        category: string | null;
+        due_date: string | null;
+        objectives: Array<{
+          id: number;
+          title: string;
+          description: string | null;
+          points: number;
+          sort_order: number;
+          is_required: boolean;
+          status: string;
+          completed_at: string | null;
+        }>;
+        has_next: boolean;
+      } | null;
+      all_challenges: Array<{
+        id: number;
+        title: string;
+        points: number;
+        sort_order: number;
+        status: string;
+        is_current: boolean;
+      }>;
+      progress: {
+        total: number;
+        completed: number;
+        percentage: number;
+      };
+    }>('/student/today', {
+      requiresAuth: true,
+    });
+  },
+
   async getActiveChallenge() {
     return apiFetch<{
       id: number;
@@ -250,6 +323,18 @@ export const studentApi = {
 
   async completeObjective(objectiveId: number) {
     return apiFetch(`/me/objectives/${objectiveId}/complete`, {
+      method: 'POST',
+      requiresAuth: true,
+    });
+  },
+
+  async completeChallenge(challengeId: number) {
+    return apiFetch<{
+      ok: boolean;
+      message: string;
+      next_challenge_activated: boolean;
+      next_challenge_id: number | null;
+    }>(`/student/challenges/${challengeId}/complete`, {
       method: 'POST',
       requiresAuth: true,
     });
