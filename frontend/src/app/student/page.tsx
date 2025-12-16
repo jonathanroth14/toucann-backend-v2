@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { studentApi } from '@/lib/api';
 import { formatApiError } from '@/lib/errors';
 
-interface Objective {
+interface Challenge {
   id: number;
   title: string;
   description: string | null;
@@ -15,28 +15,28 @@ interface Objective {
   completed_at: string | null;
 }
 
-interface Challenge {
+interface Goal {
   id: number;
   title: string;
   description: string | null;
   status: string;
-  objectives: Objective[];
+  objectives: Challenge[];
 }
 
 export default function StudentPage() {
-  const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [goal, setGoal] = useState<Goal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [completingObj, setCompletingObj] = useState<number | null>(null);
+  const [completingChallenge, setCompletingChallenge] = useState<number | null>(null);
 
   useEffect(() => {
-    loadActiveChallenge();
+    loadActiveGoal();
   }, []);
 
-  const loadActiveChallenge = async () => {
+  const loadActiveGoal = async () => {
     try {
       const data = await studentApi.getActiveChallenge();
-      setChallenge(data);
+      setGoal(data);
       setError('');
     } catch (err) {
       setError(formatApiError(err));
@@ -45,30 +45,30 @@ export default function StudentPage() {
     }
   };
 
-  const handleCompleteObjective = async (objectiveId: number) => {
-    setCompletingObj(objectiveId);
+  const handleCompleteChallenge = async (challengeId: number) => {
+    setCompletingChallenge(challengeId);
     setError('');
 
     try {
-      await studentApi.completeObjective(objectiveId);
-      // Reload active challenge to get updated state
-      await loadActiveChallenge();
+      await studentApi.completeObjective(challengeId);
+      // Reload active goal to get updated state
+      await loadActiveGoal();
     } catch (err) {
       setError(formatApiError(err));
     } finally {
-      setCompletingObj(null);
+      setCompletingChallenge(null);
     }
   };
 
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="text-center text-gray-600">Loading your challenge...</div>
+        <div className="text-center text-gray-600">Loading your goal...</div>
       </div>
     );
   }
 
-  if (error && !challenge) {
+  if (error && !goal) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded whitespace-pre-wrap">
@@ -78,40 +78,43 @@ export default function StudentPage() {
     );
   }
 
-  if (!challenge) {
+  if (!goal) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-md p-8 text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            No Active Challenge
+            No Active Goal
           </h2>
           <p className="text-gray-600">
-            Check back later for new challenges!
+            Check back later for new goals!
           </p>
         </div>
       </div>
     );
   }
 
-  const completedCount = challenge.objectives.filter((obj) => obj.status === 'COMPLETE').length;
-  const totalCount = challenge.objectives.length;
+  const completedCount = goal.objectives.filter((challenge) => challenge.status === 'COMPLETE').length;
+  const totalCount = goal.objectives.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div className="mb-2">
+          <span className="text-sm text-gray-500 uppercase tracking-wide">Your Current Goal</span>
+        </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {challenge.title}
+          {goal.title}
         </h1>
-        {challenge.description && (
-          <p className="text-gray-600 mb-4">{challenge.description}</p>
+        {goal.description && (
+          <p className="text-gray-600 mb-4">{goal.description}</p>
         )}
 
         <div className="mb-4">
           <div className="flex justify-between text-sm text-gray-600 mb-1">
             <span>Progress</span>
             <span>
-              {completedCount} / {totalCount} objectives
+              {completedCount} / {totalCount} challenges
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3">
@@ -125,14 +128,14 @@ export default function StudentPage() {
         <div className="flex items-center space-x-4 text-sm">
           <span
             className={`px-3 py-1 rounded font-medium ${
-              challenge.status === 'COMPLETE'
+              goal.status === 'COMPLETE'
                 ? 'bg-green-100 text-green-800'
-                : challenge.status === 'IN_PROGRESS'
+                : goal.status === 'IN_PROGRESS'
                 ? 'bg-blue-100 text-blue-800'
                 : 'bg-gray-100 text-gray-800'
             }`}
           >
-            {challenge.status.replace('_', ' ')}
+            {goal.status.replace('_', ' ')}
           </span>
         </div>
       </div>
@@ -144,17 +147,20 @@ export default function StudentPage() {
       )}
 
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold text-gray-900">Objectives</h2>
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-2xl font-bold text-gray-900">Next Steps</h2>
+          <span className="text-sm text-gray-500">Quick wins to move forward</span>
+        </div>
 
-        {challenge.objectives
+        {goal.objectives
           .sort((a, b) => a.sort_order - b.sort_order)
-          .map((objective) => {
-            const isComplete = objective.status === 'COMPLETE';
-            const isCompleting = completingObj === objective.id;
+          .map((challenge) => {
+            const isComplete = challenge.status === 'COMPLETE';
+            const isCompleting = completingChallenge === challenge.id;
 
             return (
               <div
-                key={objective.id}
+                key={challenge.id}
                 className={`bg-white rounded-lg shadow p-6 transition-all ${
                   isComplete ? 'opacity-75' : ''
                 }`}
@@ -181,18 +187,18 @@ export default function StudentPage() {
                             isComplete ? 'line-through text-gray-500' : 'text-gray-900'
                           }`}
                         >
-                          {objective.title}
+                          {challenge.title}
                         </h3>
-                        {objective.description && (
+                        {challenge.description && (
                           <p className="text-gray-600 mt-1 text-sm">
-                            {objective.description}
+                            {challenge.description}
                           </p>
                         )}
                         <div className="flex items-center space-x-4 mt-2 text-sm text-gray-500">
                           <span className="font-medium text-blue-600">
-                            {objective.points} points
+                            {challenge.points} points
                           </span>
-                          {objective.is_required && (
+                          {challenge.is_required && (
                             <span className="text-red-600 text-xs">Required</span>
                           )}
                         </div>
@@ -202,18 +208,18 @@ export default function StudentPage() {
 
                   {!isComplete && (
                     <button
-                      onClick={() => handleCompleteObjective(objective.id)}
+                      onClick={() => handleCompleteChallenge(challenge.id)}
                       disabled={isCompleting}
                       className="ml-4 bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed whitespace-nowrap"
                     >
-                      {isCompleting ? 'Marking...' : 'Mark Complete'}
+                      {isCompleting ? 'Marking...' : 'Complete'}
                     </button>
                   )}
                 </div>
 
-                {isComplete && objective.completed_at && (
+                {isComplete && challenge.completed_at && (
                   <p className="text-xs text-gray-500 mt-2">
-                    Completed on {new Date(objective.completed_at).toLocaleDateString()}
+                    Completed on {new Date(challenge.completed_at).toLocaleDateString()}
                   </p>
                 )}
               </div>
@@ -221,7 +227,7 @@ export default function StudentPage() {
           })}
       </div>
 
-      {challenge.status === 'COMPLETE' && (
+      {goal.status === 'COMPLETE' && (
         <div className="bg-green-50 border-2 border-green-200 rounded-lg p-6 mt-8 text-center">
           <svg
             className="w-16 h-16 text-green-500 mx-auto mb-4"
@@ -235,16 +241,16 @@ export default function StudentPage() {
             />
           </svg>
           <h3 className="text-2xl font-bold text-green-900 mb-2">
-            Challenge Complete!
+            Goal Complete!
           </h3>
-          <p className="text-green-700">
-            Great job! Your next challenge will be available soon.
+          <p className="text-green-700 mb-4">
+            Great work completing all challenges. Your next goal will be available soon.
           </p>
           <button
-            onClick={loadActiveChallenge}
+            onClick={loadActiveGoal}
             className="mt-4 bg-green-600 text-white px-6 py-2 rounded-md font-medium hover:bg-green-700"
           >
-            Check for Next Challenge
+            Check for Next Goal
           </button>
         </div>
       )}

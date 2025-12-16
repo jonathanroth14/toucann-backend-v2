@@ -20,7 +20,7 @@ export default function LoginPage() {
     try {
       const response = await authApi.login(email, password);
       auth.setToken(response.access_token);
-      router.push('/admin/challenges');
+      router.push('/admin/goals');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
