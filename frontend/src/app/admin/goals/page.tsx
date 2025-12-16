@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { adminApi } from '@/lib/api';
 import { formatApiError } from '@/lib/errors';
 
-interface Challenge {
+interface Goal {
   id: number;
   title: string;
   description: string | null;
@@ -13,9 +13,9 @@ interface Challenge {
   created_at: string;
 }
 
-export default function ChallengesPage() {
+export default function GoalsPage() {
   const router = useRouter();
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [goals, setGoals] = useState<Goal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -28,7 +28,7 @@ export default function ChallengesPage() {
   const [creating, setCreating] = useState(false);
 
   // Edit form state
-  const [editingChallenge, setEditingChallenge] = useState<Challenge | null>(null);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editIsActive, setEditIsActive] = useState(true);
@@ -39,19 +39,19 @@ export default function ChallengesPage() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    loadChallenges();
+    loadGoals();
   }, []);
 
-  const loadChallenges = async () => {
+  const loadGoals = async () => {
     setError('');
     try {
       const data = await adminApi.listChallenges();
-      console.log('📋 Loaded challenges:', data);
-      setChallenges(Array.isArray(data) ? data : []);
+      console.log('📋 Loaded goals:', data);
+      setGoals(Array.isArray(data) ? data : []);
     } catch (err) {
       const errorMsg = formatApiError(err);
       setError(errorMsg);
-      console.error('Failed to load challenges:', err);
+      console.error('Failed to load goals:', err);
     } finally {
       setLoading(false);
     }
@@ -63,17 +63,17 @@ export default function ChallengesPage() {
     setError('');
     setSuccess('');
 
-    const challengeData = {
+    const goalData = {
       title: title.trim(),
       description: description.trim() || undefined,
       is_active: isActive,
     };
 
-    console.log('Creating challenge:', challengeData);
+    console.log('Creating goal:', goalData);
 
     try {
-      const result = await adminApi.createChallenge(challengeData);
-      console.log('✅ Challenge created:', result);
+      const result = await adminApi.createChallenge(goalData);
+      console.log('✅ Goal created:', result);
 
       // Reset form
       setTitle('');
@@ -82,34 +82,34 @@ export default function ChallengesPage() {
       setShowForm(false);
 
       // Show success message
-      setSuccess(`Challenge "${result.title || title}" created successfully!`);
+      setSuccess(`Goal "${result.title}" created successfully!`);
 
-      // Reload challenges
-      await loadChallenges();
+      // Reload goals
+      await loadGoals();
 
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
       const errorMsg = formatApiError(err);
       setError(errorMsg);
-      console.error('Failed to create challenge:', err);
+      console.error('Failed to create goal:', err);
     } finally {
       setCreating(false);
     }
   };
 
-  const handleEdit = (challenge: Challenge) => {
-    setEditingChallenge(challenge);
-    setEditTitle(challenge.title);
-    setEditDescription(challenge.description || '');
-    setEditIsActive(challenge.is_active);
+  const handleEdit = (goal: Goal) => {
+    setEditingGoal(goal);
+    setEditTitle(goal.title);
+    setEditDescription(goal.description || '');
+    setEditIsActive(goal.is_active);
     setError('');
     setSuccess('');
   };
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingChallenge) return;
+    if (!editingGoal) return;
 
     setUpdating(true);
     setError('');
@@ -122,31 +122,31 @@ export default function ChallengesPage() {
     };
 
     try {
-      const result = await adminApi.updateChallenge(editingChallenge.id, updateData);
-      console.log('✅ Challenge updated:', result);
+      const result = await adminApi.updateChallenge(editingGoal.id, updateData);
+      console.log('✅ Goal updated:', result);
 
       // Close modal
-      setEditingChallenge(null);
+      setEditingGoal(null);
 
       // Show success message
-      setSuccess(`Challenge "${result.title}" updated successfully!`);
+      setSuccess(`Goal "${result.title}" updated successfully!`);
 
-      // Reload challenges
-      await loadChallenges();
+      // Reload goals
+      await loadGoals();
 
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
       const errorMsg = formatApiError(err);
       setError(errorMsg);
-      console.error('Failed to update challenge:', err);
+      console.error('Failed to update goal:', err);
     } finally {
       setUpdating(false);
     }
   };
 
-  const handleDeleteClick = (challengeId: number) => {
-    setDeletingId(challengeId);
+  const handleDeleteClick = (goalId: number) => {
+    setDeletingId(goalId);
     setError('');
     setSuccess('');
   };
@@ -160,23 +160,23 @@ export default function ChallengesPage() {
 
     try {
       const result = await adminApi.deleteChallenge(deletingId);
-      console.log('✅ Challenge deleted:', result);
+      console.log('✅ Goal deleted:', result);
 
       // Close confirmation
       setDeletingId(null);
 
       // Show success message
-      setSuccess(result.message || 'Challenge deleted successfully!');
+      setSuccess(result.message || 'Goal deleted successfully!');
 
-      // Reload challenges
-      await loadChallenges();
+      // Reload goals
+      await loadGoals();
 
       // Clear success message after 5 seconds
       setTimeout(() => setSuccess(''), 5000);
     } catch (err) {
       const errorMsg = formatApiError(err);
       setError(errorMsg);
-      console.error('Failed to delete challenge:', err);
+      console.error('Failed to delete goal:', err);
     } finally {
       setDeleting(false);
     }
@@ -185,7 +185,7 @@ export default function ChallengesPage() {
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-8">
-        <div className="text-center text-gray-600">Loading challenges...</div>
+        <div className="text-center text-gray-600">Loading your goals...</div>
       </div>
     );
   }
@@ -193,7 +193,7 @@ export default function ChallengesPage() {
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Admin: Challenges</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Goals</h1>
         <button
           onClick={() => {
             setShowForm(!showForm);
@@ -202,7 +202,7 @@ export default function ChallengesPage() {
           }}
           className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 transition-colors"
         >
-          {showForm ? 'Cancel' : 'Create Challenge'}
+          {showForm ? 'Cancel' : 'Create Goal'}
         </button>
       </div>
 
@@ -226,11 +226,11 @@ export default function ChallengesPage() {
 
       {showForm && (
         <div className="bg-white rounded-lg shadow-md p-6 mb-8 border border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Create New Challenge</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Create New Goal</h2>
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                Title <span className="text-red-500">*</span>
+                Goal Title <span className="text-red-500">*</span>
               </label>
               <input
                 id="title"
@@ -238,7 +238,7 @@ export default function ChallengesPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter challenge title"
+                placeholder="What's the big picture?"
                 required
                 minLength={3}
               />
@@ -254,7 +254,7 @@ export default function ChallengesPage() {
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Optional description for this challenge"
+                placeholder="Describe what success looks like for this goal"
               />
             </div>
 
@@ -277,7 +277,7 @@ export default function ChallengesPage() {
                 disabled={creating || !title.trim()}
                 className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               >
-                {creating ? 'Creating...' : 'Create Challenge'}
+                {creating ? 'Creating...' : 'Create Goal'}
               </button>
               <button
                 type="button"
@@ -298,15 +298,15 @@ export default function ChallengesPage() {
       )}
 
       {/* Edit Modal */}
-      {editingChallenge && (
+      {editingGoal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Edit Challenge</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Edit Goal</h2>
               <form onSubmit={handleUpdate} className="space-y-4">
                 <div>
                   <label htmlFor="editTitle" className="block text-sm font-medium text-gray-700 mb-1">
-                    Title <span className="text-red-500">*</span>
+                    Goal Title <span className="text-red-500">*</span>
                   </label>
                   <input
                     id="editTitle"
@@ -314,7 +314,7 @@ export default function ChallengesPage() {
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter challenge title"
+                    placeholder="What's the big picture?"
                     required
                     minLength={3}
                   />
@@ -330,7 +330,7 @@ export default function ChallengesPage() {
                     onChange={(e) => setEditDescription(e.target.value)}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Optional description for this challenge"
+                    placeholder="Describe what success looks like for this goal"
                   />
                 </div>
 
@@ -353,11 +353,11 @@ export default function ChallengesPage() {
                     disabled={updating || !editTitle.trim()}
                     className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                   >
-                    {updating ? 'Updating...' : 'Update Challenge'}
+                    {updating ? 'Updating...' : 'Update Goal'}
                   </button>
                   <button
                     type="button"
-                    onClick={() => setEditingChallenge(null)}
+                    onClick={() => setEditingGoal(null)}
                     disabled={updating}
                     className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
                   >
@@ -374,9 +374,9 @@ export default function ChallengesPage() {
       {deletingId !== null && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Delete Challenge?</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Delete Goal?</h2>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to delete this challenge? This will also delete all associated objectives, links, and user progress. This action cannot be undone.
+              Are you sure you want to delete this goal? This will also delete all associated challenges, links, and student progress. This action cannot be undone.
             </p>
             <div className="flex gap-3">
               <button
@@ -399,65 +399,65 @@ export default function ChallengesPage() {
       )}
 
       <div className="space-y-4">
-        {!challenges || challenges.length === 0 ? (
+        {!goals || goals.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-8 text-center border border-gray-200">
-            <p className="text-gray-600 mb-4">No challenges yet. Create one to get started.</p>
+            <p className="text-gray-600 mb-4">No goals yet. Create one to get started.</p>
             {!showForm && (
               <button
                 onClick={() => setShowForm(true)}
                 className="inline-block bg-blue-600 text-white px-6 py-2 rounded-md font-medium hover:bg-blue-700 transition-colors"
               >
-                Create First Challenge
+                Create First Goal
               </button>
             )}
           </div>
         ) : (
           <>
             <div className="text-sm text-gray-600 mb-2">
-              {challenges.length} challenge{challenges.length !== 1 ? 's' : ''} found
+              {goals.length} goal{goals.length !== 1 ? 's' : ''} found
             </div>
-            {challenges.map((challenge) => (
+            {goals.map((goal) => (
               <div
-                key={challenge.id}
+                key={goal.id}
                 className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow border border-gray-200"
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                      {challenge.title}
+                      {goal.title}
                     </h3>
-                    {challenge.description && (
-                      <p className="text-gray-600 mb-3">{challenge.description}</p>
+                    {goal.description && (
+                      <p className="text-gray-600 mb-3">{goal.description}</p>
                     )}
                     <div className="flex items-center space-x-4 text-sm text-gray-500">
                       <span
                         className={`px-2 py-1 rounded font-medium ${
-                          challenge.is_active
+                          goal.is_active
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
                         }`}
                       >
-                        {challenge.is_active ? 'Active' : 'Inactive'}
+                        {goal.is_active ? 'Active' : 'Inactive'}
                       </span>
-                      <span>ID: {challenge.id}</span>
-                      <span>Created: {new Date(challenge.created_at).toLocaleDateString()}</span>
+                      <span>ID: {goal.id}</span>
+                      <span>Created: {new Date(goal.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
                   <div className="ml-4 flex gap-2">
                     <button
-                      onClick={() => router.push(`/admin/challenges/${challenge.id}`)}
+                      onClick={() => router.push(`/admin/goals/${goal.id}`)}
                       className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md font-medium hover:bg-gray-200 transition-colors"
                     >
                       Manage
                     </button>
                     <button
-                      onClick={() => handleEdit(challenge)}
+                      onClick={() => handleEdit(goal)}
                       className="bg-blue-100 text-blue-700 px-4 py-2 rounded-md font-medium hover:bg-blue-200 transition-colors"
                     >
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDeleteClick(challenge.id)}
+                      onClick={() => handleDeleteClick(goal.id)}
                       className="bg-red-100 text-red-700 px-4 py-2 rounded-md font-medium hover:bg-red-200 transition-colors"
                     >
                       Delete
