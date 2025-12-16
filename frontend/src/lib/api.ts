@@ -254,4 +254,145 @@ export const studentApi = {
       requiresAuth: true,
     });
   },
+
+  async getNextChallenge() {
+    return apiFetch<{
+      id: number;
+      title: string;
+      description: string | null;
+      status: string;
+      objectives: Array<{
+        id: number;
+        title: string;
+        description: string | null;
+        points: number;
+        sort_order: number;
+        is_required: boolean;
+        status: string;
+        completed_at: string | null;
+      }>;
+    }>('/me/next-challenge', {
+      method: 'POST',
+      requiresAuth: true,
+    });
+  },
+
+  async getActiveGoal() {
+    return apiFetch<{
+      id: number;
+      title: string;
+      description: string | null;
+      status: string;
+      steps: Array<{
+        id: number;
+        goal_id: number;
+        title: string;
+        description: string | null;
+        points: number;
+        sort_order: number;
+        is_required: boolean;
+        status: string;
+        completed_at: string | null;
+      }>;
+    }>('/me/active-goal', {
+      requiresAuth: true,
+    });
+  },
+
+  async completeGoalStep(stepId: number) {
+    return apiFetch<{ ok: boolean; message: string; goal_complete: boolean }>(`/me/goal-steps/${stepId}/complete`, {
+      method: 'POST',
+      requiresAuth: true,
+    });
+  },
+};
+
+// Goals Admin API
+export const goalAdminApi = {
+  async listGoals() {
+    return apiFetch<Array<{
+      id: number;
+      title: string;
+      description: string | null;
+      is_active: boolean;
+      created_at: string;
+    }>>('/admin/goals', {
+      requiresAuth: true,
+    });
+  },
+
+  async getGoal(id: number) {
+    return apiFetch<{
+      id: number;
+      title: string;
+      description: string | null;
+      is_active: boolean;
+      created_at: string;
+      steps: Array<{
+        id: number;
+        goal_id: number;
+        title: string;
+        description: string | null;
+        points: number;
+        sort_order: number;
+        is_required: boolean;
+      }>;
+    }>(`/admin/goals/${id}`, {
+      requiresAuth: true,
+    });
+  },
+
+  async createGoal(data: { title: string; description?: string; is_active: boolean }) {
+    return apiFetch<{ id: number; title: string }>('/admin/goals', {
+      method: 'POST',
+      requiresAuth: true,
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateGoal(id: number, data: { title?: string; description?: string; is_active?: boolean }) {
+    return apiFetch<{
+      id: number;
+      title: string;
+      description: string | null;
+      is_active: boolean;
+      created_at: string;
+    }>(`/admin/goals/${id}`, {
+      method: 'PUT',
+      requiresAuth: true,
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteGoal(id: number) {
+    return apiFetch<{ ok: boolean; message: string }>(`/admin/goals/${id}`, {
+      method: 'DELETE',
+      requiresAuth: true,
+    });
+  },
+
+  async createStep(
+    goalId: number,
+    data: {
+      title: string;
+      description?: string;
+      points: number;
+      sort_order: number;
+      is_required: boolean;
+    }
+  ) {
+    return apiFetch<{ id: number }>(`/admin/goals/${goalId}/steps`, {
+      method: 'POST',
+      requiresAuth: true,
+      body: JSON.stringify(data),
+    });
+  },
+
+  async linkNextGoal(goalId: number, toId: number, condition: string = 'ON_COMPLETE') {
+    return apiFetch(`/admin/goals/${goalId}/link-next`, {
+      method: 'POST',
+      requiresAuth: true,
+      body: JSON.stringify({ to_goal_id: toId, condition }),
+    });
+  },
 };

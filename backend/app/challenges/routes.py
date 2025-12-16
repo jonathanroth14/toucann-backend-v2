@@ -347,3 +347,165 @@ async def complete_objective(
         started_at=progress.started_at,
         completed_at=progress.completed_at,
     )
+
+
+@router.post("/me/next-challenge", response_model=ActiveChallengeResponse)
+async def get_next_challenge(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Activate and get the next challenge.
+    Only works if current challenge is COMPLETE.
+    Allows users to do "extra challenges" if they want.
+    """
+    # Check current challenge status
+    current_progress = (
+        db.query(UserChallengeProgress)
+        .filter(
+            UserChallengeProgress.user_id == current_user.id,
+            UserChallengeProgress.status == ChallengeStatus.IN_PROGRESS,
+        )
+        .first()
+    )
+
+    # If there's an IN_PROGRESS challenge, it must be completed first
+    if current_progress:
+        # Check if all required objectives are complete
+        current_objectives = (
+            db.query(Objective)
+            .filter(Objective.challenge_id == current_progress.challenge_id)
+            .all()
+        )
+
+        all_required_complete = True
+        for obj in current_objectives:
+            if obj.is_required:
+                obj_prog = (
+                    db.query(UserObjectiveProgress)
+                    .filter(
+                        UserObjectiveProgress.user_id == current_user.id,
+                        UserObjectiveProgress.objective_id == obj.id,
+                    )
+                    .first()
+                )
+                if not obj_prog or obj_prog.status != ObjectiveStatus.COMPLETE:
+                    all_required_complete = False
+                    break
+
+        if not all_required_complete:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Complete all required objectives in your current challenge before requesting another",
+            )
+
+        # Mark current challenge as complete
+        current_progress.status = ChallengeStatus.COMPLETE
+        current_progress.completed_at = datetime.utcnow()
+        db.commit()
+
+    # Find and activate next challenge
+    completed_challenge_ids = (
+        db.query(UserChallengeProgress.challenge_id)
+        .filter(
+            UserChallengeProgress.user_id == current_user.id,
+            UserChallengeProgress.status == ChallengeStatus.COMPLETE,
+        )
+        .all()
+    )
+    completed_ids = [c[0] for c in completed_challenge_ids]
+
+    # Get next active challenge not completed
+    next_challenge = (
+        db.query(Challenge)
+        .filter(Challenge.is_active == True, ~Challenge.id.in_(completed_ids) if completed_ids else True)
+        .order_by(Challenge.id)
+        .first()
+    )
+
+    if not next_challenge:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No more challenges available. You've completed them all!",
+        )
+
+    # Create or update progress to IN_PROGRESS
+    next_progress = (
+        db.query(UserChallengeProgress)
+        .filter(
+            UserChallengeProgress.user_id == current_user.id,
+            UserChallengeProgress.challenge_id == next_challenge.id,
+        )
+        .first()
+    )
+
+    if not next_progress:
+        next_progress = UserChallengeProgress(
+            user_id=current_user.id,
+            challenge_id=next_challenge.id,
+            status=ChallengeStatus.IN_PROGRESS,
+            started_at=datetime.utcnow(),
+        )
+        db.add(next_progress)
+    else:
+        next_progress.status = ChallengeStatus.IN_PROGRESS
+        if not next_progress.started_at:
+            next_progress.started_at = datetime.utcnow()
+
+    db.commit()
+    db.refresh(next_progress)
+
+    # Get objectives with progress
+    objectives = (
+        db.query(Objective)
+        .filter(Objective.challenge_id == next_challenge.id)
+        .order_by(Objective.sort_order)
+        .all()
+    )
+
+    objectives_with_progress = []
+    for obj in objectives:
+        obj_progress = (
+            db.query(UserObjectiveProgress)
+            .filter(
+                UserObjectiveProgress.user_id == current_user.id,
+                UserObjectiveProgress.objective_id == obj.id,
+            )
+            .first()
+        )
+        if not obj_progress:
+            obj_progress = UserObjectiveProgress(
+                user_id=current_user.id,
+                objective_id=obj.id,
+                status=ObjectiveStatus.INCOMPLETE,
+            )
+            db.add(obj_progress)
+            db.commit()
+            db.refresh(obj_progress)
+
+        objectives_with_progress.append(
+            ObjectiveWithProgress(
+                id=obj.id,
+                challenge_id=obj.challenge_id,
+                title=obj.title,
+                description=obj.description,
+                points=obj.points,
+                sort_order=obj.sort_order,
+                is_required=obj.is_required,
+                status=obj_progress.status,
+                completed_at=obj_progress.completed_at,
+            )
+        )
+
+    return ActiveChallengeResponse(
+        id=next_challenge.id,
+        title=next_challenge.title,
+        description=next_challenge.description,
+        is_active=next_challenge.is_active,
+        created_by=next_challenge.created_by,
+        created_at=next_challenge.created_at,
+        objectives=objectives_with_progress,
+        status=next_progress.status,
+        started_at=next_progress.started_at,
+        completed_at=next_progress.completed_at,
+    )

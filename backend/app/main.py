@@ -10,6 +10,8 @@ from app.auth.routes import router as auth_router
 from app.users.routes import router as users_router
 from app.challenges.routes import router as challenges_router
 from app.admin.routes import router as admin_router
+from app.goals.routes import router as goals_admin_router
+from app.goals.student_routes import router as goals_student_router
 
 
 settings = get_settings()
@@ -55,6 +57,8 @@ app.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 app.include_router(users_router, prefix="/users", tags=["Users"])
 app.include_router(challenges_router, tags=["Challenges"])
 app.include_router(admin_router, prefix="/admin", tags=["Admin"])
+app.include_router(goals_admin_router, prefix="/admin", tags=["Goals Admin"])
+app.include_router(goals_student_router, tags=["Goals Student"])
 
 
 @app.get("/")
