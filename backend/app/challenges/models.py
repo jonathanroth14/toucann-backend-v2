@@ -35,7 +35,7 @@ class ObjectiveStatus(str, enum.Enum):
 
 
 class Challenge(Base):
-    """Academic challenge model"""
+    """Academic challenge model - daily tasks that belong to goals"""
 
     __tablename__ = "challenges"
 
@@ -45,6 +45,21 @@ class Challenge(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    # Goal relationship - challenges belong to goals
+    goal_id = Column(Integer, ForeignKey("goals.id", ondelete="SET NULL"), nullable=True)
+
+    # Challenge chaining - simpler than ChallengeLink table
+    next_challenge_id = Column(Integer, ForeignKey("challenges.id", ondelete="SET NULL"), nullable=True)
+
+    # Ordering and visibility
+    sort_order = Column(Integer, default=0, nullable=False)
+    visible_to_students = Column(Boolean, default=True, nullable=False)
+
+    # Challenge metadata
+    points = Column(Integer, default=10, nullable=False)
+    category = Column(String, nullable=True)
+    due_date = Column(DateTime, nullable=True)
 
     # Relationships
     objectives = relationship("Objective", back_populates="challenge", cascade="all, delete-orphan")

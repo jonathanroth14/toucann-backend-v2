@@ -81,6 +81,13 @@ async def create_challenge(
         description=challenge_data.description,
         is_active=challenge_data.is_active,
         created_by=current_admin.id,
+        goal_id=challenge_data.goal_id,
+        next_challenge_id=challenge_data.next_challenge_id,
+        sort_order=challenge_data.sort_order,
+        visible_to_students=challenge_data.visible_to_students,
+        points=challenge_data.points,
+        category=challenge_data.category,
+        due_date=challenge_data.due_date,
     )
 
     db.add(challenge)
