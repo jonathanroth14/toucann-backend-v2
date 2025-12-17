@@ -65,15 +65,29 @@ async def get_today_task(
             .all()
         ]
 
+        # Get current UTC time for date filtering
+        now = datetime.utcnow()
+
+        # Build filters for available challenges
+        filters = [
+            Challenge.is_active == True,
+            Challenge.visible_to_students == True,
+            ~Challenge.id.in_(completed_ids) if completed_ids else True,
+        ]
+
+        # Add date range filters: challenge must be started and not expired
+        # start_date: if set, must be <= now
+        # expires_at: if set, must be > now
+        filters.append(
+            (Challenge.start_date == None) | (Challenge.start_date <= now)
+        )
+        filters.append(
+            (Challenge.expires_at == None) | (Challenge.expires_at > now)
+        )
+
         first_challenge = (
             db.query(Challenge)
-            .filter(
-                and_(
-                    Challenge.is_active == True,
-                    Challenge.visible_to_students == True,
-                    ~Challenge.id.in_(completed_ids) if completed_ids else True,
-                )
-            )
+            .filter(and_(*filters))
             .order_by(Challenge.sort_order, Challenge.id)
             .first()
         )
