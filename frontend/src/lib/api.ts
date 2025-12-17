@@ -152,6 +152,12 @@ export const adminApi = {
       points: number;
       category: string | null;
       due_date: string | null;
+      start_date: string | null;
+      expires_at: string | null;
+      recurrence_days: number | null;
+      recurrence_limit: number | null;
+      recurrence_count: number;
+      original_challenge_id: number | null;
     }>>('/admin/challenges', {
       requiresAuth: true,
     });
@@ -188,6 +194,10 @@ export const adminApi = {
     points?: number;
     category?: string;
     due_date?: string;
+    start_date?: string;
+    expires_at?: string;
+    recurrence_days?: number;
+    recurrence_limit?: number;
   }) {
     return apiFetch<{ id: number; title: string }>('/admin/challenges', {
       method: 'POST',
@@ -207,6 +217,10 @@ export const adminApi = {
     points?: number;
     category?: string;
     due_date?: string;
+    start_date?: string;
+    expires_at?: string;
+    recurrence_days?: number;
+    recurrence_limit?: number;
   }) {
     return apiFetch<{
       id: number;
