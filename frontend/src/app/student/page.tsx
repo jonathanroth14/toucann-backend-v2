@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { studentApi } from '@/lib/api';
 import { formatApiError } from '@/lib/errors';
+import TodayTaskCard from '@/components/TodayTaskCard';
 
 interface Objective {
   id: number;
@@ -15,7 +16,7 @@ interface Objective {
   completed_at: string | null;
 }
 
-interface CurrentChallenge {
+interface Challenge {
   id: number;
   title: string;
   description: string | null;
@@ -23,7 +24,7 @@ interface CurrentChallenge {
   category: string | null;
   due_date: string | null;
   objectives: Objective[];
-  has_next: boolean;
+  has_next?: boolean;
 }
 
 interface CurrentGoal {
@@ -41,26 +42,31 @@ interface ChallengeNode {
   is_current: boolean;
 }
 
+interface ChainPreview {
+  id: number;
+  title: string;
+  points: number;
+  category: string | null;
+}
+
 interface TodayData {
   current_goal: CurrentGoal | null;
-  current_challenge: CurrentChallenge | null;
+  primary_challenge: Challenge | null;
+  secondary_challenge: Challenge | null;
+  challenge_chain: ChainPreview[];
   all_challenges: ChallengeNode[];
   progress: {
     total: number;
     completed: number;
     percentage: number;
   };
+  second_slot_enabled: boolean;
 }
 
 export default function StudentDashboard() {
   const [todayData, setTodayData] = useState<TodayData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showTaskList, setShowTaskList] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
-  const [completingObjective, setCompletingObjective] = useState<number | null>(null);
-  const [requestingNext, setRequestingNext] = useState(false);
-  const [expandedWhy, setExpandedWhy] = useState(false);
   const [showNextSteps, setShowNextSteps] = useState(true);
 
   useEffect(() => {
@@ -79,38 +85,10 @@ export default function StudentDashboard() {
     }
   };
 
-  const handleCompleteObjective = async (objectiveId: number) => {
-    setCompletingObjective(objectiveId);
-    setError('');
-
-    try {
-      await studentApi.completeObjective(objectiveId);
-      await loadTodayTask();
-    } catch (err) {
-      setError(formatApiError(err));
-    } finally {
-      setCompletingObjective(null);
-    }
-  };
-
-  const handleRequestNextChallenge = async () => {
-    setRequestingNext(true);
-    setError('');
-
-    try {
-      await studentApi.getNextChallenge();
-      await loadTodayTask();
-    } catch (err) {
-      setError(formatApiError(err));
-    } finally {
-      setRequestingNext(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-        <div className="text-center text-gray-600">Loading your task...</div>
+        <div className="text-center text-gray-600">Loading your tasks...</div>
       </div>
     );
   }
@@ -125,31 +103,24 @@ export default function StudentDashboard() {
     );
   }
 
-  if (!todayData?.current_challenge) {
+  if (!todayData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 px-4">
         <div className="glass-card p-12 text-center max-w-md">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            🎉 All Caught Up!
+            Something went wrong
           </h2>
           <p className="text-gray-600">
-            No active challenges right now. Check back later for new tasks!
+            Unable to load your tasks. Please try refreshing the page.
           </p>
         </div>
       </div>
     );
   }
 
-  const { current_goal, current_challenge, all_challenges, progress } = todayData;
+  const { current_goal, primary_challenge, secondary_challenge, challenge_chain, progress, second_slot_enabled } = todayData;
 
-  const completedObjectives = current_challenge.objectives.filter(
-    (obj) => obj.status === 'COMPLETE'
-  ).length;
-  const totalObjectives = current_challenge.objectives.length;
-  const allObjectivesComplete = completedObjectives === totalObjectives;
-
-  // Get other challenges (not current)
-  const otherChallenges = all_challenges.filter(c => !c.is_current && c.status !== 'COMPLETE');
+  const incompleteTasks = primary_challenge && primary_challenge.objectives.some(obj => obj.status === 'INCOMPLETE');
 
   return (
     <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative min-h-[calc(100vh-4rem)]">
@@ -160,7 +131,7 @@ export default function StudentDashboard() {
         <div className="blob blob-3"></div>
       </div>
 
-      <div className="relative max-w-3xl mx-auto px-4 py-8 space-y-6">
+      <div className="relative max-w-4xl mx-auto px-4 py-8 space-y-6">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
@@ -178,7 +149,35 @@ export default function StudentDashboard() {
           </div>
         )}
 
-        {/* Achievements Card - Orange Gradient */}
+        {/* 1. Student Level Card (Progress Bar) */}
+        <div className="glass-card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">🎓</span>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Student Level</h3>
+                <p className="text-sm text-gray-600">Keep completing tasks to level up!</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-2xl font-bold text-blue-600">Level {Math.floor(progress.completed / 5) + 1}</div>
+              <div className="text-xs text-gray-500">{progress.completed} tasks completed</div>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-blue-500 to-purple-600 h-full rounded-full transition-all duration-500"
+              style={{ width: `${progress.percentage}%` }}
+            ></div>
+          </div>
+          <div className="mt-2 text-xs text-gray-600 text-right">
+            {progress.completed} / {progress.total} challenges ({progress.percentage}%)
+          </div>
+        </div>
+
+        {/* 2. Achievements Card */}
         <div className="rounded-2xl bg-gradient-to-r from-orange-200 via-yellow-200 to-orange-300 p-6 shadow-lg">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
@@ -201,8 +200,8 @@ export default function StudentDashboard() {
           </button>
         </div>
 
-        {/* Next Steps Card - Green/Blue Gradient - Only when objectives incomplete */}
-        {!allObjectivesComplete && showNextSteps && (
+        {/* 3. Next Steps Card (Conditional - only when tasks incomplete) */}
+        {incompleteTasks && showNextSteps && primary_challenge && (
           <div className="rounded-2xl bg-gradient-to-r from-green-100 via-blue-100 to-purple-100 p-6 shadow-lg border-2 border-blue-300">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -223,205 +222,26 @@ export default function StudentDashboard() {
               <div className="flex items-center gap-3">
                 <span className="text-2xl">🎯</span>
                 <span className="text-gray-900 font-medium">
-                  {current_challenge.title}
+                  {primary_challenge.title}
                 </span>
               </div>
-              <button
-                onClick={() => setShowDetails(true)}
-                className="bg-blue-500 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors shadow-sm"
-              >
-                Mark done
-              </button>
+              <div className="text-sm text-gray-600">
+                {primary_challenge.objectives.filter(obj => obj.status === 'INCOMPLETE').length} steps remaining
+              </div>
             </div>
           </div>
         )}
 
-        {/* Today's Task - ONE Featured Task */}
-        <div className="glass-card p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">📋</span>
-              <span className="text-xl font-bold text-gray-900">Today's Task</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowTaskList(!showTaskList)}
-                className="text-sm border border-gray-300 bg-white px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-              >
-                {showTaskList ? 'Hide list' : 'Show list'}
-              </button>
-              <button
-                onClick={handleRequestNextChallenge}
-                disabled={requestingNext || !allObjectivesComplete}
-                className="text-sm bg-white border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              >
-                {requestingNext ? 'Loading...' : '+ Add another task'}
-              </button>
-            </div>
-          </div>
+        {/* 4. Today's Task Card (THE MAIN FEATURE) */}
+        <TodayTaskCard
+          primaryChallenge={primary_challenge}
+          secondaryChallenge={secondary_challenge}
+          challengeChain={challenge_chain}
+          secondSlotEnabled={second_slot_enabled}
+          onRefresh={loadTodayTask}
+        />
 
-          {/* Featured Task Card - ONE TASK ONLY */}
-          <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 mb-4">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
-                <span className="text-5xl">⭐</span>
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                    Daily Boost
-                  </span>
-                  <span className="text-2xl">📚</span>
-                </div>
-
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                  {current_challenge.title}
-                </h3>
-
-                <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
-                  {current_challenge.due_date && (
-                    <div className="flex items-center gap-1">
-                      <span>📅</span>
-                      <span suppressHydrationWarning>{new Date(current_challenge.due_date).toLocaleDateString()}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1">
-                    <span>⭐</span>
-                    <span>{current_challenge.points} pts</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <span>👤</span>
-                    <span>{current_challenge.category || 'Profile'}</span>
-                  </div>
-                </div>
-
-                {/* Why this? expandable */}
-                <button
-                  onClick={() => setExpandedWhy(!expandedWhy)}
-                  className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1 mb-4 font-medium"
-                >
-                  <span>{expandedWhy ? '▼' : '▶'}</span>
-                  <span>Why this?</span>
-                </button>
-
-                {expandedWhy && current_challenge.description && (
-                  <div className="bg-blue-50 rounded-lg p-4 mb-4 text-sm text-gray-700 border border-blue-200">
-                    {current_challenge.description}
-                  </div>
-                )}
-
-                {/* Action buttons */}
-                <div className="flex items-center gap-3 mb-3">
-                  <button className="text-sm border border-gray-300 bg-white px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 font-medium">
-                    <span>✏️</span>
-                    <span>Make it easier</span>
-                  </button>
-                  <button
-                    onClick={() => setShowDetails(!showDetails)}
-                    className="text-sm border border-gray-300 bg-white px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                  >
-                    Open details
-                  </button>
-                  <button className="text-sm border border-gray-300 bg-white px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2 font-medium">
-                    <span>🔄</span>
-                    <span>Swap</span>
-                  </button>
-                </div>
-
-                <button className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-2 font-medium">
-                  <span>😴</span>
-                  <span>Not today</span>
-                </button>
-
-                {/* Objectives shown only when "Open details" is clicked */}
-                {showDetails && current_challenge.objectives.length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <h4 className="text-sm font-bold text-gray-700 mb-3 uppercase">Objectives:</h4>
-                    <div className="space-y-2">
-                      {current_challenge.objectives
-                        .sort((a, b) => a.sort_order - b.sort_order)
-                        .map((obj) => {
-                          const isComplete = obj.status === 'COMPLETE';
-                          const isCompleting = completingObjective === obj.id;
-
-                          return (
-                            <div
-                              key={obj.id}
-                              className="flex items-center gap-3 bg-gray-50 rounded-lg p-3 border border-gray-200"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={isComplete}
-                                onChange={() => !isComplete && handleCompleteObjective(obj.id)}
-                                disabled={isCompleting}
-                                className="w-4 h-4 text-blue-600 rounded border-gray-300"
-                              />
-                              <span
-                                className={`flex-1 text-sm ${
-                                  isComplete ? 'line-through text-gray-400' : 'text-gray-900'
-                                }`}
-                              >
-                                {obj.title}
-                              </span>
-                              {obj.points > 0 && (
-                                <span className="text-xs text-gray-500 font-medium">+{obj.points} pts</span>
-                              )}
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Collapsed task list - shown when "Show list" is toggled */}
-          {showTaskList && (
-            <div className="space-y-2">
-              {/* Show current task in collapsed form too */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
-                <div className="flex-shrink-0">
-                  <span className="text-2xl">📚</span>
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-900 mb-1">{current_challenge.title}</h4>
-                  <div className="flex items-center gap-3 text-xs text-gray-500">
-                    {current_challenge.due_date && (
-                      <span suppressHydrationWarning>📅 {new Date(current_challenge.due_date).toLocaleDateString()}</span>
-                    )}
-                    <span>⭐ {current_challenge.points} pts</span>
-                    <span>👤 {current_challenge.category || 'Profile'}</span>
-                  </div>
-                </div>
-                <button className="text-gray-400 hover:text-gray-600">▼</button>
-              </div>
-
-              {/* Other challenges */}
-              {otherChallenges.slice(0, 3).map((challenge) => (
-                <div
-                  key={challenge.id}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex items-center gap-4 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex-shrink-0">
-                    <span className="text-2xl">📚</span>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-gray-900 mb-1">{challenge.title}</h4>
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
-                      <span>📅 12/19/2025</span>
-                      <span>⭐ {challenge.points} pts</span>
-                      <span>👤 Profile</span>
-                    </div>
-                  </div>
-                  <button className="text-gray-400 hover:text-gray-600">▼</button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Your Snapshot Card */}
+        {/* 5. Your Snapshot Card */}
         <div className="glass-card p-6">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-2xl">📸</span>

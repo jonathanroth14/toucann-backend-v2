@@ -214,6 +214,151 @@ psql $DATABASE_URL -c "UPDATE users SET is_admin = true WHERE email = 'admin@exa
 - **Horizontal progress tracker**: Challenge nodes with checkmarks
 - **One-focus UX**: Single challenge spotlight to prevent overwhelm
 
+## 📋 How Today's Task Works
+
+### Overview
+The Today's Task system is designed to prevent student overwhelm by showing **ONE primary challenge at a time** with optional expansion to a second challenge. It includes powerful features like challenge chaining, swapping, and snoozing.
+
+### Key Features
+
+#### 1. Anti-Overwhelm Design
+- **Primary Task Slot**: Always shows ONE main challenge
+- **Optional Second Slot**: Students can add a bonus task via "+ Add another task"
+- **Focus Mode**: Current objective is highlighted, others are hidden until expanded
+
+#### 2. Challenge Chaining
+Challenges can be linked in sequence (A → B → C):
+- When Challenge A is completed → Challenge B automatically activates
+- Students see upcoming challenges in "Your path today" progress track
+- Perfect for onboarding flows and learning sequences
+
+**Admin Setup:**
+1. Go to `/admin/challenges/{id}`
+2. Use "Link Next Challenge" dropdown
+3. Select the next challenge in the sequence
+4. Save to create the chain
+
+**How it works:**
+- Chain is stored via `next_challenge_id` field in database
+- On completion, backend checks for `next_challenge_id`
+- If exists, auto-activates next challenge for student
+- Preview shown in UI as horizontal pill track
+
+#### 3. Challenge Actions
+
+**Mark Done**
+- Completes current objective (or entire challenge if all objectives done)
+- Auto-advances to next objective
+- When all required objectives complete → challenge marked complete
+- If chained, next challenge auto-activates
+
+**Swap**
+- Swaps current challenge with another available one
+- Current challenge returns to available pool
+- New challenge becomes active immediately
+- Useful when student wants variety
+
+**Not Today (Snooze)**
+- Snoozes current challenge for 1-30 days
+- Challenge hidden from available pool during snooze period
+- Another challenge auto-activates to replace it
+- Stored in `snoozed_challenges` table
+
+**+ Add Another Task**
+- Enables second challenge slot
+- Automatically assigns next available challenge
+- Preference stored in `user_challenge_preferences` table
+- Second slot persists across sessions
+
+#### 4. Backend Endpoints
+
+```bash
+# Get today's tasks (primary + secondary + chain preview)
+GET /student/today
+
+Response:
+{
+  "primary_challenge": { ... },
+  "secondary_challenge": { ... },
+  "challenge_chain": [{ "id": 2, "title": "Next task", ... }],
+  "second_slot_enabled": false
+}
+
+# Enable second slot
+POST /me/today/add-slot
+
+# Swap primary challenge
+POST /me/today/swap
+
+# Snooze challenge
+POST /me/today/snooze?days=1
+```
+
+#### 5. Database Schema
+
+**New Tables:**
+- `user_challenge_preferences`: Tracks second slot setting and current second challenge
+- `snoozed_challenges`: Tracks snoozed challenges with `snoozed_until` timestamp
+
+**Modified Behavior:**
+- `/student/today` now filters out snoozed challenges from available pool
+- Auto-assigns first non-snoozed, non-completed challenge
+- Respects date ranges (`start_date`, `expires_at`)
+
+#### 6. Frontend Components
+
+**TodayTaskCard** (`/components/TodayTaskCard.tsx`)
+- Main container for Today's Task section
+- Handles add-slot, swap, snooze actions
+- Renders TaskTile and ChallengeTrack
+
+**TaskTile** (`/components/TaskTile.tsx`)
+- Individual challenge card with badge, metadata, objectives
+- "Why this?" collapsible accordion
+- Action buttons (Mark done, Swap, Not today)
+
+**ChallengeTrack** (`/components/ChallengeTrack.tsx`)
+- Horizontal progress pills showing chain
+- Current challenge highlighted in blue
+- Upcoming challenges shown in gray
+
+**WhyThisAccordion** (`/components/WhyThisAccordion.tsx`)
+- Collapsible description panel
+- Shows challenge rationale
+
+#### 7. Seeding Example Data
+
+Run the seed script to create an onboarding challenge chain:
+
+```bash
+cd backend
+python seed_onboarding_chain.py
+```
+
+This creates a 5-challenge sequence:
+1. "Add one target school"
+2. "Add GPA + Grad year"
+3. "Pick SAT goal"
+4. "Complete profile"
+5. "Do first SAT mini challenge"
+
+Each challenge automatically chains to the next when completed.
+
+#### 8. Student Dashboard Layout
+
+**Section Order:**
+1. **Student Level** - Progress bar showing total completion
+2. **Achievements** - Completed challenges and streaks
+3. **Next Steps** (conditional) - Only appears when objectives incomplete
+4. **Today's Task** - THE MAIN FEATURE (primary + optional secondary)
+5. **Your Snapshot** - Profile stats (GPA, grad year, etc.)
+
+**Design Goals:**
+- Soft gradient background with animated blobs
+- Big rounded cards with shadow
+- Clean, playful, mobile-friendly
+- Anti-overwhelm: one task at a time
+
 ## 🚢 Deployment
 
 ### Backend to Railway

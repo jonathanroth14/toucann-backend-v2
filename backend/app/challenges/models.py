@@ -163,3 +163,37 @@ class UserObjectiveProgress(Base):
 
     def __repr__(self):
         return f"<UserObjectiveProgress(user_id={self.user_id}, objective_id={self.objective_id}, status={self.status})>"
+
+
+class UserChallengePreferences(Base):
+    """User preferences for challenge system"""
+
+    __tablename__ = "user_challenge_preferences"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    second_slot_enabled = Column(Boolean, default=False, nullable=False)
+    second_slot_challenge_id = Column(Integer, ForeignKey("challenges.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f"<UserChallengePreferences(user_id={self.user_id}, second_slot_enabled={self.second_slot_enabled})>"
+
+
+class SnoozedChallenge(Base):
+    """Tracks challenges that users have snoozed"""
+
+    __tablename__ = "snoozed_challenges"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    challenge_id = Column(Integer, ForeignKey("challenges.id", ondelete="CASCADE"), nullable=False)
+    snoozed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    snoozed_until = Column(DateTime, nullable=False, comment="When challenge becomes available again")
+    reason = Column(String, nullable=True, comment="Optional reason for snoozing")
+
+    __table_args__ = (UniqueConstraint("user_id", "challenge_id", name="uq_user_snoozed_challenge"),)
+
+    def __repr__(self):
+        return f"<SnoozedChallenge(user_id={self.user_id}, challenge_id={self.challenge_id}, until={self.snoozed_until})>"
