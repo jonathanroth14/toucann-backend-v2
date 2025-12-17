@@ -47,6 +47,13 @@ class Goal(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
+    # Scheduling and recurrence
+    start_date = Column(DateTime, nullable=True, comment="When goal becomes available")
+    expires_at = Column(DateTime, nullable=True, comment="When goal expires if not completed")
+    recurrence_days = Column(Integer, nullable=True, comment="Days until goal reappears (null = no recurrence)")
+    recurrence_limit = Column(Integer, nullable=True, comment="Max times to recur (null = infinite)")
+    recurrence_count = Column(Integer, default=0, nullable=False, comment="Current recurrence count")
+
     # Relationships
     steps = relationship("GoalStep", back_populates="goal", cascade="all, delete-orphan")
     links_from = relationship(

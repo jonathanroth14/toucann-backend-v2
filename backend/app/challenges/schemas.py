@@ -71,6 +71,12 @@ class ChallengeCreate(ChallengeBase):
     category: Optional[str] = None
     due_date: Optional[datetime] = None
 
+    # Scheduling and recurrence
+    start_date: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    recurrence_days: Optional[int] = None
+    recurrence_limit: Optional[int] = None
+
 
 class ChallengeUpdate(BaseModel):
     """Schema for updating a challenge"""
@@ -86,6 +92,12 @@ class ChallengeUpdate(BaseModel):
     category: Optional[str] = None
     due_date: Optional[datetime] = None
 
+    # Scheduling and recurrence
+    start_date: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    recurrence_days: Optional[int] = None
+    recurrence_limit: Optional[int] = None
+
 
 class ChallengeResponse(ChallengeBase):
     """Schema for challenge response"""
@@ -100,6 +112,14 @@ class ChallengeResponse(ChallengeBase):
     points: int = 10
     category: Optional[str] = None
     due_date: Optional[datetime] = None
+
+    # Scheduling and recurrence
+    start_date: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    recurrence_days: Optional[int] = None
+    recurrence_limit: Optional[int] = None
+    recurrence_count: int = 0
+    original_challenge_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 

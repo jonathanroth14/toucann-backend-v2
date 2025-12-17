@@ -61,6 +61,15 @@ class Challenge(Base):
     category = Column(String, nullable=True)
     due_date = Column(DateTime, nullable=True)
 
+    # Scheduling and recurrence
+    start_date = Column(DateTime, nullable=True, comment="When challenge becomes available")
+    expires_at = Column(DateTime, nullable=True, comment="When challenge expires if not completed")
+    recurrence_days = Column(Integer, nullable=True, comment="Days until challenge reappears (null = no recurrence)")
+    recurrence_limit = Column(Integer, nullable=True, comment="Max times to recur (null = infinite)")
+    recurrence_count = Column(Integer, default=0, nullable=False, comment="Current recurrence count")
+    original_challenge_id = Column(Integer, ForeignKey("challenges.id", ondelete="SET NULL"), nullable=True,
+                                    comment="ID of original challenge if this is a recurrence")
+
     # Relationships
     objectives = relationship("Objective", back_populates="challenge", cascade="all, delete-orphan")
     links_from = relationship(
