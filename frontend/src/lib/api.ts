@@ -145,6 +145,13 @@ export const adminApi = {
       description: string | null;
       is_active: boolean;
       created_at: string;
+      goal_id: number | null;
+      next_challenge_id: number | null;
+      sort_order: number;
+      visible_to_students: boolean;
+      points: number;
+      category: string | null;
+      due_date: string | null;
     }>>('/admin/challenges', {
       requiresAuth: true,
     });
