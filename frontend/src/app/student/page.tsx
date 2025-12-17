@@ -152,7 +152,7 @@ export default function StudentDashboard() {
   const otherChallenges = all_challenges.filter(c => !c.is_current && c.status !== 'COMPLETE');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative overflow-hidden">
+    <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative min-h-[calc(100vh-4rem)]">
       {/* Animated blurry blobs background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="blob blob-1"></div>
@@ -282,7 +282,7 @@ export default function StudentDashboard() {
                   {current_challenge.due_date && (
                     <div className="flex items-center gap-1">
                       <span>📅</span>
-                      <span>{new Date(current_challenge.due_date).toLocaleDateString()}</span>
+                      <span suppressHydrationWarning>{new Date(current_challenge.due_date).toLocaleDateString()}</span>
                     </div>
                   )}
                   <div className="flex items-center gap-1">
@@ -388,7 +388,7 @@ export default function StudentDashboard() {
                   <h4 className="font-semibold text-gray-900 mb-1">{current_challenge.title}</h4>
                   <div className="flex items-center gap-3 text-xs text-gray-500">
                     {current_challenge.due_date && (
-                      <span>📅 {new Date(current_challenge.due_date).toLocaleDateString()}</span>
+                      <span suppressHydrationWarning>📅 {new Date(current_challenge.due_date).toLocaleDateString()}</span>
                     )}
                     <span>⭐ {current_challenge.points} pts</span>
                     <span>👤 {current_challenge.category || 'Profile'}</span>
