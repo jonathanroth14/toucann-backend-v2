@@ -21,6 +21,13 @@ interface Challenge {
   is_active: boolean;
   created_at: string;
   objectives: Objective[];
+  next_challenge_id?: number | null;
+}
+
+interface ChallengeListItem {
+  id: number;
+  title: string;
+  sort_order: number;
 }
 
 export default function AdminChallengeDetailPage() {
@@ -29,10 +36,13 @@ export default function AdminChallengeDetailPage() {
   const challengeId = parseInt(params.id as string);
 
   const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [allChallenges, setAllChallenges] = useState<ChallengeListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showObjectiveForm, setShowObjectiveForm] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [selectedNextChallenge, setSelectedNextChallenge] = useState<string>('');
+  const [linkingNext, setLinkingNext] = useState(false);
 
   const [objectiveForm, setObjectiveForm] = useState({
     title: '',
@@ -43,8 +53,25 @@ export default function AdminChallengeDetailPage() {
   });
 
   useEffect(() => {
-    loadChallenge();
+    loadData();
   }, [challengeId]);
+
+  const loadData = async () => {
+    try {
+      const [challengeData, challengesListData] = await Promise.all([
+        adminApi.getChallenge(challengeId),
+        adminApi.listChallenges(),
+      ]);
+      setChallenge(challengeData);
+      setAllChallenges(challengesListData);
+      setSelectedNextChallenge(challengeData.next_challenge_id?.toString() || '');
+      setError('');
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadChallenge = async () => {
     try {
@@ -53,8 +80,26 @@ export default function AdminChallengeDetailPage() {
       setError('');
     } catch (err) {
       setError(formatApiError(err));
+    }
+  };
+
+  const handleLinkNextChallenge = async () => {
+    if (!selectedNextChallenge) {
+      setError('Please select a challenge to link');
+      return;
+    }
+
+    setLinkingNext(true);
+    setError('');
+
+    try {
+      await adminApi.linkNextChallenge(challengeId, parseInt(selectedNextChallenge));
+      await loadChallenge();
+      alert('Next challenge linked successfully!');
+    } catch (err) {
+      setError(formatApiError(err));
     } finally {
-      setLoading(false);
+      setLinkingNext(false);
     }
   };
 
@@ -131,6 +176,59 @@ export default function AdminChallengeDetailPage() {
           {error}
         </div>
       )}
+
+      {/* Challenge Chaining Section */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Challenge Chain</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Link this challenge to another challenge. When students complete this challenge, the next one will automatically activate.
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Next Challenge (activates when this one is completed)
+            </label>
+            <div className="flex gap-3">
+              <select
+                value={selectedNextChallenge}
+                onChange={(e) => setSelectedNextChallenge(e.target.value)}
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">No next challenge (end of chain)</option>
+                {allChallenges
+                  .filter(c => c.id !== challengeId)  // Don't allow linking to self
+                  .sort((a, b) => a.sort_order - b.sort_order)
+                  .map(c => (
+                    <option key={c.id} value={c.id}>
+                      {c.title} (Sort: {c.sort_order})
+                    </option>
+                  ))}
+              </select>
+              <button
+                onClick={handleLinkNextChallenge}
+                disabled={linkingNext}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 whitespace-nowrap"
+              >
+                {linkingNext ? 'Linking...' : 'Link Challenge'}
+              </button>
+            </div>
+          </div>
+
+          {challenge.next_challenge_id && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-center gap-2 text-sm text-blue-800">
+                <span className="font-medium">Current chain:</span>
+                <span>{challenge.title}</span>
+                <span>→</span>
+                <span className="font-medium">
+                  {allChallenges.find(c => c.id === challenge.next_challenge_id)?.title || 'Unknown'}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <div className="flex items-center justify-between mb-4">

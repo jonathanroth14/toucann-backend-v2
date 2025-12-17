@@ -247,8 +247,8 @@ async def link_next_challenge(
     current_admin: User = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
-    """Link a next challenge (upsert) (admin only)"""
-    # Verify both challenges exist
+    """Link a next challenge using next_challenge_id field (admin only)"""
+    # Verify source challenge exists
     from_challenge = db.query(Challenge).filter(Challenge.id == challenge_id).first()
     if not from_challenge:
         raise HTTPException(
@@ -256,6 +256,7 @@ async def link_next_challenge(
             detail="Source challenge not found",
         )
 
+    # Verify target challenge exists
     to_challenge = db.query(Challenge).filter(Challenge.id == link_data.to_challenge_id).first()
     if not to_challenge:
         raise HTTPException(
@@ -263,33 +264,18 @@ async def link_next_challenge(
             detail="Target challenge not found",
         )
 
-    # Check if link already exists
-    existing_link = (
-        db.query(ChallengeLink)
-        .filter(
-            ChallengeLink.from_challenge_id == challenge_id,
-            ChallengeLink.condition == link_data.condition,
-        )
-        .first()
-    )
+    # Update the next_challenge_id field directly (simpler than ChallengeLink table)
+    from_challenge.next_challenge_id = link_data.to_challenge_id
+    db.commit()
+    db.refresh(from_challenge)
 
-    if existing_link:
-        # Update existing link
-        existing_link.to_challenge_id = link_data.to_challenge_id
-        db.commit()
-        db.refresh(existing_link)
-        return existing_link
-    else:
-        # Create new link
-        new_link = ChallengeLink(
-            from_challenge_id=challenge_id,
-            to_challenge_id=link_data.to_challenge_id,
-            condition=link_data.condition,
-        )
-        db.add(new_link)
-        db.commit()
-        db.refresh(new_link)
-        return new_link
+    # Return in the expected format
+    return {
+        "id": 0,  # Not used anymore but kept for compatibility
+        "from_challenge_id": challenge_id,
+        "to_challenge_id": link_data.to_challenge_id,
+        "condition": link_data.condition,
+    }
 
 
 # User Management
