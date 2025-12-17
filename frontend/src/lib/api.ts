@@ -302,7 +302,45 @@ export const studentApi = {
           completed_at: string | null;
         }>;
         has_next: boolean;
+        next_challenge_id: number | null;
       } | null;
+      second_challenge: {
+        id: number;
+        title: string;
+        description: string | null;
+        points: number;
+        category: string | null;
+        due_date: string | null;
+        objectives: Array<{
+          id: number;
+          title: string;
+          description: string | null;
+          points: number;
+          sort_order: number;
+          is_required: boolean;
+          status: string;
+          completed_at: string | null;
+        }>;
+        has_next: boolean;
+        next_challenge_id: number | null;
+      } | null;
+      chain_preview: Array<{
+        id: number;
+        title: string;
+        category: string | null;
+        points: number;
+      }>;
+      available_challenges: Array<{
+        id: number;
+        title: string;
+        category: string | null;
+        points: number;
+        description: string | null;
+      }>;
+      student_state: {
+        second_slot_enabled: boolean;
+        can_add_second_slot: boolean;
+      };
       all_challenges: Array<{
         id: number;
         title: string;
@@ -318,6 +356,41 @@ export const studentApi = {
       };
     }>('/student/today', {
       requiresAuth: true,
+    });
+  },
+
+  async addSecondSlot() {
+    return apiFetch<{
+      ok: boolean;
+      message: string;
+      second_slot_enabled: boolean;
+    }>('/student/today/add-slot', {
+      method: 'POST',
+      requiresAuth: true,
+    });
+  },
+
+  async swapChallenge(newChallengeId: number, slot: number = 1) {
+    return apiFetch<{
+      ok: boolean;
+      message: string;
+      new_challenge_id: number;
+    }>('/student/today/swap', {
+      method: 'POST',
+      requiresAuth: true,
+      body: JSON.stringify({ new_challenge_id: newChallengeId, slot }),
+    });
+  },
+
+  async snoozeChallenge(challengeId: number, days: number = 1) {
+    return apiFetch<{
+      ok: boolean;
+      message: string;
+      snoozed_until: string;
+    }>('/student/today/snooze', {
+      method: 'POST',
+      requiresAuth: true,
+      body: JSON.stringify({ challenge_id: challengeId, days }),
     });
   },
 
