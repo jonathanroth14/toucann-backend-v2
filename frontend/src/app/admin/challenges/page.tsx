@@ -18,6 +18,12 @@ interface Challenge {
   points: number;
   category: string | null;
   due_date: string | null;
+  start_date: string | null;
+  expires_at: string | null;
+  recurrence_days: number | null;
+  recurrence_limit: number | null;
+  recurrence_count: number;
+  original_challenge_id: number | null;
 }
 
 interface Goal {
@@ -47,6 +53,10 @@ export default function AdminChallengesPage() {
     points: 10,
     category: '',
     due_date: '',
+    start_date: '',
+    expires_at: '',
+    recurrence_days: '',
+    recurrence_limit: '',
   });
 
   useEffect(() => {
@@ -86,6 +96,10 @@ export default function AdminChallengesPage() {
         points: formData.points,
         category: formData.category || undefined,
         due_date: formData.due_date || undefined,
+        start_date: formData.start_date || undefined,
+        expires_at: formData.expires_at || undefined,
+        recurrence_days: formData.recurrence_days ? parseInt(formData.recurrence_days) : undefined,
+        recurrence_limit: formData.recurrence_limit ? parseInt(formData.recurrence_limit) : undefined,
       });
 
       setFormData({
@@ -99,6 +113,10 @@ export default function AdminChallengesPage() {
         points: 10,
         category: '',
         due_date: '',
+        start_date: '',
+        expires_at: '',
+        recurrence_days: '',
+        recurrence_limit: '',
       });
       setShowCreateForm(false);
       await loadData();
@@ -261,6 +279,76 @@ export default function AdminChallengesPage() {
               </div>
             </div>
 
+            {/* Scheduling and Recurrence Section */}
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                Scheduling & Recurrence (Optional)
+              </h3>
+              <p className="text-xs text-gray-500 mb-4">
+                Set when this challenge becomes available, when it expires, and whether it should recur automatically.
+              </p>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date (Available From)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.start_date}
+                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">When challenge becomes visible to students</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Expires At (If Not Completed)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={formData.expires_at}
+                    onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">When challenge disappears if incomplete</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Recurrence Days (Days to Reappear)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g., 7 for weekly, 1 for daily"
+                    value={formData.recurrence_days}
+                    onChange={(e) => setFormData({ ...formData, recurrence_days: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">How many days until challenge reappears</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Recurrence Limit (Max Times)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Leave empty for unlimited"
+                    value={formData.recurrence_limit}
+                    onChange={(e) => setFormData({ ...formData, recurrence_limit: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Maximum number of times to recur (blank = infinite)</p>
+                </div>
+              </div>
+            </div>
+
             <div className="flex items-center gap-6">
               <label className="flex items-center gap-2">
                 <input
@@ -356,6 +444,33 @@ export default function AdminChallengesPage() {
                         <span>Due: {new Date(challenge.due_date).toLocaleDateString()}</span>
                       )}
                     </div>
+
+                    {/* Scheduling Info */}
+                    {(challenge.start_date || challenge.expires_at || challenge.recurrence_days) && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          {challenge.start_date && (
+                            <span className="flex items-center gap-1">
+                              <span className="font-medium">Starts:</span>
+                              {new Date(challenge.start_date).toLocaleString()}
+                            </span>
+                          )}
+                          {challenge.expires_at && (
+                            <span className="flex items-center gap-1">
+                              <span className="font-medium">Expires:</span>
+                              {new Date(challenge.expires_at).toLocaleString()}
+                            </span>
+                          )}
+                          {challenge.recurrence_days && (
+                            <span className="flex items-center gap-1">
+                              <span className="font-medium">Recurs:</span>
+                              Every {challenge.recurrence_days} day{challenge.recurrence_days !== 1 ? 's' : ''}
+                              {challenge.recurrence_limit && ` (max ${challenge.recurrence_limit}x)`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-2">
