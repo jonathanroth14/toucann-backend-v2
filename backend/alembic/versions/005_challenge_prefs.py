@@ -1,6 +1,6 @@
 """Add user challenge preferences and snooze functionality
 
-Revision ID: 005_add_challenge_preferences_snooze
+Revision ID: 005_challenge_prefs
 Revises: 004_add_scheduling
 Create Date: 2025-01-17
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '005_add_challenge_preferences_snooze'
+revision = '005_challenge_prefs'
 down_revision = '004_add_scheduling'
 branch_labels = None
 depends_on = None
