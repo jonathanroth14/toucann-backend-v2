@@ -604,3 +604,50 @@ export const goalAdminApi = {
     });
   },
 };
+
+// Notifications API
+export const notificationsApi = {
+  async getNotifications() {
+    return apiFetch<{
+      notifications: Array<{
+        id: number;
+        type: string;
+        title: string;
+        body: string;
+        related_goal_id: number | null;
+        related_challenge_id: number | null;
+        scheduled_for: string;
+        created_at: string;
+        read_at: string | null;
+        dismissed_at: string | null;
+        is_read: boolean;
+        is_dismissed: boolean;
+        is_active: boolean;
+      }>;
+      unread_count: number;
+    }>('/me/notifications', {
+      requiresAuth: true,
+    });
+  },
+
+  async markAsRead(notificationId: number) {
+    return apiFetch<{ ok: boolean; message: string }>(`/me/notifications/${notificationId}/read`, {
+      method: 'POST',
+      requiresAuth: true,
+    });
+  },
+
+  async dismiss(notificationId: number) {
+    return apiFetch<{ ok: boolean; message: string }>(`/me/notifications/${notificationId}/dismiss`, {
+      method: 'POST',
+      requiresAuth: true,
+    });
+  },
+
+  async generateNotifications() {
+    return apiFetch<{ ok: boolean; message: string; count: number }>('/me/notifications/generate', {
+      method: 'POST',
+      requiresAuth: true,
+    });
+  },
+};
