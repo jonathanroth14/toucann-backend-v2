@@ -422,6 +422,12 @@ export const goalAdminApi = {
       description: string | null;
       is_active: boolean;
       created_at: string;
+      start_date: string | null;
+      expires_at: string | null;
+      recurrence_days: number | null;
+      recurrence_limit: number | null;
+      recurrence_count: number;
+      original_goal_id: number | null;
     }>>('/admin/goals', {
       requiresAuth: true,
     });
@@ -448,7 +454,15 @@ export const goalAdminApi = {
     });
   },
 
-  async createGoal(data: { title: string; description?: string; is_active: boolean }) {
+  async createGoal(data: {
+    title: string;
+    description?: string;
+    is_active: boolean;
+    start_date?: string;
+    expires_at?: string;
+    recurrence_days?: number;
+    recurrence_limit?: number;
+  }) {
     return apiFetch<{ id: number; title: string }>('/admin/goals', {
       method: 'POST',
       requiresAuth: true,
@@ -456,13 +470,27 @@ export const goalAdminApi = {
     });
   },
 
-  async updateGoal(id: number, data: { title?: string; description?: string; is_active?: boolean }) {
+  async updateGoal(id: number, data: {
+    title?: string;
+    description?: string;
+    is_active?: boolean;
+    start_date?: string;
+    expires_at?: string;
+    recurrence_days?: number;
+    recurrence_limit?: number;
+  }) {
     return apiFetch<{
       id: number;
       title: string;
       description: string | null;
       is_active: boolean;
       created_at: string;
+      start_date: string | null;
+      expires_at: string | null;
+      recurrence_days: number | null;
+      recurrence_limit: number | null;
+      recurrence_count: number;
+      original_goal_id: number | null;
     }>(`/admin/goals/${id}`, {
       method: 'PUT',
       requiresAuth: true,

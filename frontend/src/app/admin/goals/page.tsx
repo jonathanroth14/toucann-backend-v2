@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { adminApi } from '@/lib/api';
+import { goalAdminApi } from '@/lib/api';
 import { formatApiError } from '@/lib/errors';
 
 interface Goal {
@@ -59,7 +59,7 @@ export default function GoalsPage() {
   const loadGoals = async () => {
     setError('');
     try {
-      const data = await adminApi.listChallenges();
+      const data = await goalAdminApi.listGoals();
       console.log('📋 Loaded goals:', data);
       setGoals(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -90,7 +90,7 @@ export default function GoalsPage() {
     console.log('Creating goal:', goalData);
 
     try {
-      const result = await adminApi.createChallenge(goalData);
+      const result = await goalAdminApi.createGoal(goalData);
       console.log('✅ Goal created:', result);
 
       // Reset form
@@ -152,7 +152,7 @@ export default function GoalsPage() {
     };
 
     try {
-      const result = await adminApi.updateChallenge(editingGoal.id, updateData);
+      const result = await goalAdminApi.updateGoal(editingGoal.id, updateData);
       console.log('✅ Goal updated:', result);
 
       // Close modal
@@ -189,7 +189,7 @@ export default function GoalsPage() {
     setSuccess('');
 
     try {
-      const result = await adminApi.deleteChallenge(deletingId);
+      const result = await goalAdminApi.deleteGoal(deletingId);
       console.log('✅ Goal deleted:', result);
 
       // Close confirmation
