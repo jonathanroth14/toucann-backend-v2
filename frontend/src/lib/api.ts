@@ -284,7 +284,7 @@ export const studentApi = {
         title: string;
         description: string | null;
       } | null;
-      current_challenge: {
+      primary_challenge: {
         id: number;
         title: string;
         description: string | null;
@@ -303,6 +303,30 @@ export const studentApi = {
         }>;
         has_next: boolean;
       } | null;
+      secondary_challenge: {
+        id: number;
+        title: string;
+        description: string | null;
+        points: number;
+        category: string | null;
+        due_date: string | null;
+        objectives: Array<{
+          id: number;
+          title: string;
+          description: string | null;
+          points: number;
+          sort_order: number;
+          is_required: boolean;
+          status: string;
+          completed_at: string | null;
+        }>;
+      } | null;
+      challenge_chain: Array<{
+        id: number;
+        title: string;
+        points: number;
+        category: string | null;
+      }>;
       all_challenges: Array<{
         id: number;
         title: string;
@@ -316,7 +340,57 @@ export const studentApi = {
         completed: number;
         percentage: number;
       };
+      second_slot_enabled: boolean;
     }>('/student/today', {
+      requiresAuth: true,
+    });
+  },
+
+  async addSecondSlot() {
+    return apiFetch<{
+      ok: boolean;
+      message: string;
+      second_slot_challenge_id: number;
+      challenge: {
+        id: number;
+        title: string;
+        description: string | null;
+        points: number;
+        category: string | null;
+      };
+    }>('/me/today/add-slot', {
+      method: 'POST',
+      requiresAuth: true,
+    });
+  },
+
+  async swapChallenge() {
+    return apiFetch<{
+      ok: boolean;
+      message: string;
+      new_challenge_id: number;
+      challenge: {
+        id: number;
+        title: string;
+        description: string | null;
+        points: number;
+        category: string | null;
+      };
+    }>('/me/today/swap', {
+      method: 'POST',
+      requiresAuth: true,
+    });
+  },
+
+  async snoozeChallenge(days: number = 1) {
+    return apiFetch<{
+      ok: boolean;
+      message: string;
+      snoozed_until: string;
+      new_challenge_activated: boolean;
+      new_challenge_id: number | null;
+    }>(`/me/today/snooze?days=${days}`, {
+      method: 'POST',
       requiresAuth: true,
     });
   },

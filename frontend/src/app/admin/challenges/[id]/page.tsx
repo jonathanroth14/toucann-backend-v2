@@ -29,10 +29,13 @@ export default function AdminChallengeDetailPage() {
   const challengeId = parseInt(params.id as string);
 
   const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [allChallenges, setAllChallenges] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showObjectiveForm, setShowObjectiveForm] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [linking, setLinking] = useState(false);
+  const [selectedNextChallengeId, setSelectedNextChallengeId] = useState<number | null>(null);
 
   const [objectiveForm, setObjectiveForm] = useState({
     title: '',
@@ -43,8 +46,24 @@ export default function AdminChallengeDetailPage() {
   });
 
   useEffect(() => {
-    loadChallenge();
+    loadData();
   }, [challengeId]);
+
+  const loadData = async () => {
+    try {
+      const [challengeData, challengesData] = await Promise.all([
+        adminApi.getChallenge(challengeId),
+        adminApi.listChallenges(),
+      ]);
+      setChallenge(challengeData);
+      setAllChallenges(challengesData);
+      setError('');
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadChallenge = async () => {
     try {
@@ -53,8 +72,6 @@ export default function AdminChallengeDetailPage() {
       setError('');
     } catch (err) {
       setError(formatApiError(err));
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -78,6 +95,27 @@ export default function AdminChallengeDetailPage() {
       setError(formatApiError(err));
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleLinkNextChallenge = async () => {
+    if (!selectedNextChallengeId) {
+      setError('Please select a challenge to link');
+      return;
+    }
+
+    setLinking(true);
+    setError('');
+
+    try {
+      await adminApi.linkNextChallenge(challengeId, selectedNextChallengeId);
+      alert('Challenge linked successfully! This will be reflected when students complete this challenge.');
+      setSelectedNextChallengeId(null);
+      await loadData();
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setLinking(false);
     }
   };
 
@@ -264,6 +302,56 @@ export default function AdminChallengeDetailPage() {
               ))}
           </div>
         )}
+      </div>
+
+      {/* Link Next Challenge Section */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Challenge Chaining</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Link this challenge to another challenge that should automatically activate when students complete this one.
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Next Challenge in Chain
+            </label>
+            <div className="flex gap-3">
+              <select
+                value={selectedNextChallengeId || ''}
+                onChange={(e) => setSelectedNextChallengeId(e.target.value ? parseInt(e.target.value) : null)}
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="">-- Select Next Challenge --</option>
+                {allChallenges
+                  .filter(ch => ch.id !== challengeId)
+                  .map(ch => (
+                    <option key={ch.id} value={ch.id}>
+                      {ch.title} (ID: {ch.id})
+                    </option>
+                  ))}
+              </select>
+
+              <button
+                onClick={handleLinkNextChallenge}
+                disabled={linking || !selectedNextChallengeId}
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 text-sm font-medium"
+              >
+                {linking ? 'Linking...' : 'Link Challenge'}
+              </button>
+            </div>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="text-sm font-semibold text-blue-900 mb-2">How Challenge Chaining Works:</h4>
+            <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
+              <li>When a student completes all required objectives in this challenge, it will be marked as complete.</li>
+              <li>If a next challenge is linked, it will automatically become the student's active challenge.</li>
+              <li>Students will see a preview of upcoming challenges in their "Your path today" progress track.</li>
+              <li>Use chaining to create guided onboarding flows or learning sequences.</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   );
