@@ -22,6 +22,7 @@ from app.challenges.models import (
     SnoozedChallenge,
 )
 from app.goals.models import Goal, UserGoalProgress, GoalStatus
+from app.notifications.service import NotificationService
 
 router = APIRouter()
 
@@ -385,6 +386,14 @@ async def complete_challenge(
     progress.status = ChallengeStatus.COMPLETE
     progress.completed_at = datetime.utcnow()
     db.commit()
+
+    # Generate streak encouragement notification
+    try:
+        notification_service = NotificationService(db)
+        notification_service.generate_streak_encouragement(current_user.id, challenge.id)
+    except Exception as e:
+        # Don't fail the completion if notification generation fails
+        print(f"Failed to generate streak notification: {e}")
 
     # If there's a next challenge, activate it
     if challenge.next_challenge_id:

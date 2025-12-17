@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/auth';
+import NotificationBell from './NotificationBell';
 
 export default function Navbar() {
   const router = useRouter();
@@ -39,7 +40,8 @@ export default function Navbar() {
               </>
             )}
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center gap-4">
+            {isAuthenticated && <NotificationBell />}
             {isAuthenticated ? (
               <button
                 onClick={handleLogout}

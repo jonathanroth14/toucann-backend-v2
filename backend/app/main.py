@@ -13,6 +13,7 @@ from app.admin.routes import router as admin_router
 from app.goals.routes import router as goals_admin_router
 from app.goals.student_routes import router as goals_student_router
 from app.students.routes import router as students_router
+from app.notifications.routes import router as notifications_router
 
 
 settings = get_settings()
@@ -61,6 +62,7 @@ app.include_router(admin_router, prefix="/admin", tags=["Admin"])
 app.include_router(goals_admin_router, prefix="/admin", tags=["Goals Admin"])
 app.include_router(goals_student_router, tags=["Goals Student"])
 app.include_router(students_router, tags=["Students"])
+app.include_router(notifications_router, tags=["Notifications"])
 
 
 @app.get("/")
