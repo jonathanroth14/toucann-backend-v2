@@ -12,7 +12,6 @@ interface Objective {
   points: number;
   sort_order: number;
   is_required: boolean;
-  challenge_id: number;
 }
 
 interface Challenge {
