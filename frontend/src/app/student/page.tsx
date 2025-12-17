@@ -3,7 +3,12 @@
 import { useState, useEffect } from 'react';
 import { studentApi } from '@/lib/api';
 import { formatApiError } from '@/lib/errors';
-import TodayTaskCard from '@/components/TodayTaskCard';
+import TodayObjectiveCard from '@/components/TodayObjectiveCard';
+import ObjectiveProgressTrack from '@/components/ObjectiveProgressTrack';
+import NextStepsPanel from '@/components/NextStepsPanel';
+import StudentLevelCard from '@/components/StudentLevelCard';
+import AchievementsCard from '@/components/AchievementsCard';
+import SnapshotCard from '@/components/SnapshotCard';
 
 interface Objective {
   id: number;
@@ -12,49 +17,22 @@ interface Objective {
   points: number;
   sort_order: number;
   is_required: boolean;
-  status: string;
+  is_completed: boolean;
   completed_at: string | null;
-}
-
-interface Challenge {
-  id: number;
-  title: string;
-  description: string | null;
-  points: number;
-  category: string | null;
-  due_date: string | null;
-  objectives: Objective[];
-  has_next?: boolean;
 }
 
 interface CurrentGoal {
   id: number;
   title: string;
   description: string | null;
-}
-
-interface ChallengeNode {
-  id: number;
-  title: string;
-  points: number;
-  sort_order: number;
   status: string;
-  is_current: boolean;
-}
-
-interface ChainPreview {
-  id: number;
-  title: string;
-  points: number;
-  category: string | null;
 }
 
 interface TodayData {
   current_goal: CurrentGoal | null;
-  primary_challenge: Challenge | null;
-  secondary_challenge: Challenge | null;
-  challenge_chain: ChainPreview[];
-  all_challenges: ChallengeNode[];
+  current_objective: Objective | null;
+  next_objective: Objective | null;
+  all_objectives: Objective[];
   progress: {
     total: number;
     completed: number;
@@ -67,7 +45,7 @@ export default function StudentDashboard() {
   const [todayData, setTodayData] = useState<TodayData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showNextSteps, setShowNextSteps] = useState(true);
+  const [secondSlotEnabled, setSecondSlotEnabled] = useState(false);
 
   useEffect(() => {
     loadTodayTask();
@@ -77,12 +55,28 @@ export default function StudentDashboard() {
     try {
       const data = await studentApi.getTodayTask();
       setTodayData(data);
+      setSecondSlotEnabled(data.second_slot_enabled);
       setError('');
     } catch (err) {
       setError(formatApiError(err));
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleMarkDone = async (objectiveId: number) => {
+    try {
+      await studentApi.completeGoalStep(objectiveId);
+      // Reload data to get next objective
+      await loadTodayTask();
+    } catch (err) {
+      setError(formatApiError(err));
+      throw err; // Re-throw to let component handle it
+    }
+  };
+
+  const handleAddAnotherTask = () => {
+    setSecondSlotEnabled(true);
   };
 
   if (loading) {
@@ -118,9 +112,23 @@ export default function StudentDashboard() {
     );
   }
 
-  const { current_goal, primary_challenge, secondary_challenge, challenge_chain, progress, second_slot_enabled } = todayData;
+  const { current_goal, current_objective, next_objective, all_objectives, progress } = todayData;
 
-  const incompleteTasks = primary_challenge && primary_challenge.objectives.some(obj => obj.status === 'INCOMPLETE');
+  // Calculate total points from completed objectives
+  const totalPoints = all_objectives
+    .filter(obj => obj.is_completed)
+    .reduce((sum, obj) => sum + obj.points, 0);
+
+  // Calculate completed today (simple placeholder)
+  const completedToday = all_objectives.filter(obj => {
+    if (!obj.completed_at) return false;
+    const completedDate = new Date(obj.completed_at);
+    const today = new Date();
+    return completedDate.toDateString() === today.toDateString();
+  }).length;
+
+  // Placeholder streak
+  const streak = 1;
 
   return (
     <div className="bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative min-h-[calc(100vh-4rem)]">
@@ -149,129 +157,45 @@ export default function StudentDashboard() {
           </div>
         )}
 
-        {/* 1. Student Level Card (Progress Bar) */}
-        <div className="glass-card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">🎓</span>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">Student Level</h3>
-                <p className="text-sm text-gray-600">Keep completing tasks to level up!</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-blue-600">Level {Math.floor(progress.completed / 5) + 1}</div>
-              <div className="text-xs text-gray-500">{progress.completed} tasks completed</div>
-            </div>
-          </div>
-
-          {/* Progress bar */}
-          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-            <div
-              className="bg-gradient-to-r from-blue-500 to-purple-600 h-full rounded-full transition-all duration-500"
-              style={{ width: `${progress.percentage}%` }}
-            ></div>
-          </div>
-          <div className="mt-2 text-xs text-gray-600 text-right">
-            {progress.completed} / {progress.total} challenges ({progress.percentage}%)
-          </div>
-        </div>
+        {/* 1. Student Level Card */}
+        <StudentLevelCard totalPoints={totalPoints} />
 
         {/* 2. Achievements Card */}
-        <div className="rounded-2xl bg-gradient-to-r from-orange-200 via-yellow-200 to-orange-300 p-6 shadow-lg">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🏆</span>
-              <span className="text-xl font-bold text-gray-900">Achievements</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-gray-900">{progress.completed}</span>
-              <span className="text-gray-700">/ {progress.total}</span>
-              <div className="ml-2 bg-orange-100 border border-orange-200 rounded-lg px-3 py-1">
-                <span className="text-sm font-medium text-orange-900">1-day streak</span>
-              </div>
-            </div>
-          </div>
-          <p className="text-gray-800 mb-4">
-            Nice start—come back tomorrow for a 2-day streak!
-          </p>
-          <button className="w-full bg-blue-500 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors flex items-center justify-center gap-2 shadow-md">
-            🏆 View Achievements
-          </button>
-        </div>
+        <AchievementsCard />
 
-        {/* 3. Next Steps Card (Conditional - only when tasks incomplete) */}
-        {incompleteTasks && showNextSteps && primary_challenge && (
-          <div className="rounded-2xl bg-gradient-to-r from-green-100 via-blue-100 to-purple-100 p-6 shadow-lg border-2 border-blue-300">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">⚠️</span>
-                <span className="text-xl font-bold text-gray-900">Next Steps</span>
-                <span className="text-xs text-gray-600 ml-2 bg-white/50 px-2 py-1 rounded">
-                  Appears only when needed
-                </span>
-              </div>
-              <button
-                onClick={() => setShowNextSteps(false)}
-                className="text-gray-600 hover:text-gray-800 text-xl leading-none"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="bg-white rounded-lg p-4 flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">🎯</span>
-                <span className="text-gray-900 font-medium">
-                  {primary_challenge.title}
-                </span>
-              </div>
-              <div className="text-sm text-gray-600">
-                {primary_challenge.objectives.filter(obj => obj.status === 'INCOMPLETE').length} steps remaining
-              </div>
-            </div>
-          </div>
+        {/* 3. Next Steps Panel (Notifications - only shows if there are notifications) */}
+        <NextStepsPanel />
+
+        {/* 4. Progress Track */}
+        {current_goal && all_objectives.length > 0 && (
+          <ObjectiveProgressTrack
+            goalTitle={current_goal.title}
+            objectives={all_objectives}
+            currentObjectiveId={current_objective?.id || null}
+          />
         )}
 
-        {/* 4. Today's Task Card (THE MAIN FEATURE) */}
-        <TodayTaskCard
-          primaryChallenge={primary_challenge}
-          secondaryChallenge={secondary_challenge}
-          challengeChain={challenge_chain}
-          secondSlotEnabled={second_slot_enabled}
-          onRefresh={loadTodayTask}
-        />
+        {/* 5. Today's Task (Main Feature) */}
+        {current_goal && (
+          <TodayObjectiveCard
+            goalTitle={current_goal.title}
+            goalDescription={current_goal.description}
+            currentObjective={current_objective}
+            nextObjective={next_objective}
+            allObjectives={all_objectives}
+            progress={progress}
+            secondSlotEnabled={secondSlotEnabled}
+            onMarkDone={handleMarkDone}
+            onAddAnotherTask={handleAddAnotherTask}
+          />
+        )}
 
-        {/* 5. Your Snapshot Card */}
-        <div className="glass-card p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-2xl">📸</span>
-            <h3 className="text-lg font-semibold text-gray-900">Your Snapshot</h3>
-          </div>
-          <div className="grid grid-cols-3 gap-4 text-center mb-4">
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <div className="text-sm text-gray-500 mb-1">GPA</div>
-              <div className="text-2xl font-bold text-gray-900">3.6</div>
-            </div>
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <div className="text-sm text-gray-500 mb-1">Grad Year</div>
-              <div className="text-2xl font-bold text-gray-900">2027</div>
-            </div>
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <div className="text-sm text-gray-500 mb-1">SAT Goal</div>
-              <div className="text-2xl font-bold text-gray-900">1400</div>
-            </div>
-          </div>
-          <div>
-            <div className="text-sm text-gray-600 font-medium mb-2">Target Schools</div>
-            <div className="bg-white rounded-lg px-4 py-2 text-sm text-gray-700 shadow-sm border border-gray-200">
-              UT Austin
-            </div>
-          </div>
-          <button className="mt-4 w-full border border-gray-300 bg-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
-            <span>✏️</span>
-            <span>Edit Profile</span>
-          </button>
-        </div>
+        {/* 6. Snapshot Card */}
+        <SnapshotCard
+          completedToday={completedToday}
+          totalPoints={totalPoints}
+          streak={streak}
+        />
       </div>
 
       <style jsx>{`

@@ -20,6 +20,35 @@ from app.goals.models import (
     GoalStepStatus,
 )
 from app.goals.schemas import ActiveGoalResponse, GoalStepWithProgress
+from typing import Optional
+from pydantic import BaseModel
+
+
+# New schema for Today's Task response
+class ObjectiveDetail(BaseModel):
+    """Detailed objective info for today's task"""
+    id: int
+    title: str
+    description: Optional[str]
+    points: int
+    sort_order: int
+    is_required: bool
+    is_completed: bool
+    completed_at: Optional[datetime]
+
+    class Config:
+        from_attributes = True
+
+
+class TodayTaskResponse(BaseModel):
+    """Response for /student/today endpoint"""
+    current_goal: Optional[dict]
+    current_objective: Optional[ObjectiveDetail]
+    next_objective: Optional[ObjectiveDetail]
+    all_objectives: list[ObjectiveDetail]
+    progress: dict
+    second_slot_enabled: bool
+
 
 router = APIRouter()
 
@@ -291,3 +320,135 @@ async def complete_goal_step(
         "message": f"Step '{step.title}' marked as complete",
         "goal_complete": goal_complete,
     }
+
+
+@router.get("/student/today", response_model=TodayTaskResponse)
+async def get_today_task(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Get today's task data for student dashboard.
+    Returns current goal, current objective, and all objectives with progress.
+    """
+    # Find user's active goal (IN_PROGRESS)
+    active_progress = (
+        db.query(UserGoalProgress)
+        .filter(
+            and_(
+                UserGoalProgress.user_id == current_user.id,
+                UserGoalProgress.status == GoalStatus.IN_PROGRESS,
+            )
+        )
+        .first()
+    )
+
+    # If no active goal, auto-assign first one
+    if not active_progress:
+        goal = _auto_assign_first_goal(db, current_user.id)
+        if not goal:
+            # No goals available - return empty state
+            return TodayTaskResponse(
+                current_goal=None,
+                current_objective=None,
+                next_objective=None,
+                all_objectives=[],
+                progress={"total": 0, "completed": 0, "percentage": 0},
+                second_slot_enabled=False,
+            )
+        # Reload progress
+        active_progress = (
+            db.query(UserGoalProgress)
+            .filter(
+                and_(
+                    UserGoalProgress.user_id == current_user.id,
+                    UserGoalProgress.goal_id == goal.id,
+                )
+            )
+            .first()
+        )
+
+    # Get goal
+    goal = db.query(Goal).filter(Goal.id == active_progress.goal_id).first()
+    if not goal:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Goal not found",
+        )
+
+    # Get all steps ordered by sort_order
+    steps = (
+        db.query(GoalStep)
+        .filter(GoalStep.goal_id == goal.id)
+        .order_by(GoalStep.sort_order)
+        .all()
+    )
+
+    # Build objectives with progress
+    all_objectives = []
+    incomplete_objectives = []
+    completed_count = 0
+
+    for step in steps:
+        step_progress = (
+            db.query(UserGoalStepProgress)
+            .filter(
+                and_(
+                    UserGoalStepProgress.user_id == current_user.id,
+                    UserGoalStepProgress.step_id == step.id,
+                )
+            )
+            .first()
+        )
+
+        is_completed = step_progress and step_progress.status == GoalStepStatus.COMPLETE
+        if is_completed:
+            completed_count += 1
+
+        objective = ObjectiveDetail(
+            id=step.id,
+            title=step.title,
+            description=step.description,
+            points=step.points,
+            sort_order=step.sort_order,
+            is_required=step.is_required,
+            is_completed=is_completed,
+            completed_at=step_progress.completed_at if step_progress else None,
+        )
+
+        all_objectives.append(objective)
+
+        if not is_completed:
+            incomplete_objectives.append(objective)
+
+    # Current objective = first incomplete step
+    current_objective = incomplete_objectives[0] if len(incomplete_objectives) > 0 else None
+
+    # Next objective = second incomplete step
+    next_objective = incomplete_objectives[1] if len(incomplete_objectives) > 1 else None
+
+    # Calculate progress
+    total_count = len(steps)
+    percentage = round((completed_count / total_count * 100)) if total_count > 0 else 0
+
+    # Check if second slot is enabled (for now, default to False)
+    # This can be enhanced later with user preferences
+    second_slot_enabled = False
+
+    return TodayTaskResponse(
+        current_goal={
+            "id": goal.id,
+            "title": goal.title,
+            "description": goal.description,
+            "status": active_progress.status.value,
+        },
+        current_objective=current_objective,
+        next_objective=next_objective,
+        all_objectives=all_objectives,
+        progress={
+            "total": total_count,
+            "completed": completed_count,
+            "percentage": percentage,
+        },
+        second_slot_enabled=second_slot_enabled,
+    )
