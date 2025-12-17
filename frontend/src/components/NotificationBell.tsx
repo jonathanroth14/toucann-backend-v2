@@ -6,15 +6,18 @@ import { notificationsApi } from '@/lib/api';
 
 interface Notification {
   id: number;
-  type: 'deadline' | 'nudge' | 'streak';
+  type: string;
   title: string;
   body: string;
-  related_goal_id?: number;
-  related_challenge_id?: number;
+  related_goal_id: number | null;
+  related_challenge_id: number | null;
   scheduled_for: string;
-  read_at?: string;
-  dismissed_at?: string;
   created_at: string;
+  read_at: string | null;
+  dismissed_at: string | null;
+  is_read: boolean;
+  is_dismissed: boolean;
+  is_active: boolean;
 }
 
 interface NotificationResponse {
@@ -72,12 +75,12 @@ export default function NotificationBell() {
   // Mark as read and navigate
   const handleNotificationClick = async (notification: Notification) => {
     // Mark as read if not already
-    if (!notification.read_at) {
+    if (!notification.is_read) {
       try {
         await notificationsApi.markAsRead(notification.id);
         // Update local state
         setNotifications(prev =>
-          prev.map(n => n.id === notification.id ? { ...n, read_at: new Date().toISOString() } : n)
+          prev.map(n => n.id === notification.id ? { ...n, is_read: true, read_at: new Date().toISOString() } : n)
         );
         setUnreadCount(prev => Math.max(0, prev - 1));
       } catch (error) {
@@ -107,7 +110,7 @@ export default function NotificationBell() {
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
 
       // Update unread count if dismissed notification was unread
-      if (dismissedNotification && !dismissedNotification.read_at) {
+      if (dismissedNotification && !dismissedNotification.is_read) {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
     } catch (error) {
@@ -190,7 +193,7 @@ export default function NotificationBell() {
                   key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
                   className={`px-4 py-3 border-b border-gray-100/50 hover:bg-indigo-50/30 cursor-pointer transition-colors ${
-                    !notification.read_at ? 'bg-blue-50/30' : ''
+                    !notification.is_read ? 'bg-blue-50/30' : ''
                   }`}
                 >
                   <div className="flex items-start justify-between">
@@ -200,7 +203,7 @@ export default function NotificationBell() {
                         <p className="text-sm font-medium text-gray-900 truncate">
                           {notification.title}
                         </p>
-                        {!notification.read_at && (
+                        {!notification.is_read && (
                           <span className="flex-shrink-0 inline-block h-2 w-2 rounded-full bg-blue-500"></span>
                         )}
                       </div>
