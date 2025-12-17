@@ -7,7 +7,6 @@ Create Date: 2025-01-17
 """
 from alembic import op
 import sqlalchemy as sa
-from datetime import datetime
 
 
 # revision identifiers, used by Alembic.
@@ -26,7 +25,7 @@ def upgrade() -> None:
         sa.Column('second_slot_enabled', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('second_slot_challenge_id', sa.Integer(), sa.ForeignKey('challenges.id', ondelete='SET NULL'), nullable=True),
         sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP')),
-        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP'), onupdate=datetime.utcnow),
+        sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP')),
     )
 
     # Create snoozed_challenges table
