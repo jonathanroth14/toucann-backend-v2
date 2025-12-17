@@ -84,24 +84,73 @@ export default function AdminChallengesPage() {
     setCreating(true);
     setError('');
 
-    try {
-      await adminApi.createChallenge({
-        title: formData.title,
-        description: formData.description || undefined,
-        is_active: formData.is_active,
-        goal_id: formData.goal_id ? parseInt(formData.goal_id) : undefined,
-        next_challenge_id: formData.next_challenge_id ? parseInt(formData.next_challenge_id) : undefined,
-        sort_order: formData.sort_order,
-        visible_to_students: formData.visible_to_students,
-        points: formData.points,
-        category: formData.category || undefined,
-        due_date: formData.due_date || undefined,
-        start_date: formData.start_date || undefined,
-        expires_at: formData.expires_at || undefined,
-        recurrence_days: formData.recurrence_days ? parseInt(formData.recurrence_days) : undefined,
-        recurrence_limit: formData.recurrence_limit ? parseInt(formData.recurrence_limit) : undefined,
-      });
+    // Enable debug logging (set to false in production)
+    const DEBUG = true;
 
+    try {
+      // Build payload - only include non-empty fields with correct types
+      const payload: any = {
+        title: formData.title,
+        is_active: formData.is_active,
+      };
+
+      // Optional string fields - only add if non-empty
+      if (formData.description && formData.description.trim()) {
+        payload.description = formData.description;
+      }
+      if (formData.category && formData.category.trim()) {
+        payload.category = formData.category;
+      }
+
+      // Optional number fields - convert to number and only add if valid
+      if (formData.goal_id && formData.goal_id !== '') {
+        payload.goal_id = parseInt(formData.goal_id);
+      }
+      if (formData.next_challenge_id && formData.next_challenge_id !== '') {
+        payload.next_challenge_id = parseInt(formData.next_challenge_id);
+      }
+
+      // Always include sort_order and points (required fields with defaults)
+      payload.sort_order = typeof formData.sort_order === 'number' ? formData.sort_order : 0;
+      payload.points = typeof formData.points === 'number' ? formData.points : 10;
+      payload.visible_to_students = formData.visible_to_students;
+
+      // Optional date fields - convert to ISO string if provided
+      if (formData.due_date && formData.due_date.trim()) {
+        payload.due_date = new Date(formData.due_date).toISOString();
+      }
+      if (formData.start_date && formData.start_date.trim()) {
+        payload.start_date = new Date(formData.start_date).toISOString();
+      }
+      if (formData.expires_at && formData.expires_at.trim()) {
+        payload.expires_at = new Date(formData.expires_at).toISOString();
+      }
+
+      // Optional recurrence fields - only add if valid numbers
+      if (formData.recurrence_days && formData.recurrence_days !== '') {
+        const days = parseInt(formData.recurrence_days);
+        if (!isNaN(days) && days > 0) {
+          payload.recurrence_days = days;
+        }
+      }
+      if (formData.recurrence_limit && formData.recurrence_limit !== '') {
+        const limit = parseInt(formData.recurrence_limit);
+        if (!isNaN(limit) && limit > 0) {
+          payload.recurrence_limit = limit;
+        }
+      }
+
+      if (DEBUG) {
+        console.log('🔵 Creating challenge with payload:', JSON.stringify(payload, null, 2));
+      }
+
+      const response = await adminApi.createChallenge(payload);
+
+      if (DEBUG) {
+        console.log('✅ Challenge created successfully:', response);
+      }
+
+      // Reset form
       setFormData({
         title: '',
         description: '',
@@ -118,10 +167,34 @@ export default function AdminChallengesPage() {
         recurrence_days: '',
         recurrence_limit: '',
       });
+
       setShowCreateForm(false);
       await loadData();
-    } catch (err) {
-      setError(formatApiError(err));
+    } catch (err: any) {
+      if (DEBUG) {
+        console.error('❌ Challenge creation failed:', err);
+      }
+
+      // Enhanced error handling - extract full detail message
+      let errorMessage = 'Failed to create challenge';
+
+      if (err.data) {
+        // If we have parsed error data from API
+        if (typeof err.data.detail === 'string') {
+          errorMessage = err.data.detail;
+        } else if (err.data.detail && typeof err.data.detail === 'object') {
+          // Handle validation errors (array of objects)
+          errorMessage = JSON.stringify(err.data.detail, null, 2);
+        } else if (err.data.message) {
+          errorMessage = err.data.message;
+        } else {
+          errorMessage = JSON.stringify(err.data, null, 2);
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+
+      setError(errorMessage);
     } finally {
       setCreating(false);
     }
