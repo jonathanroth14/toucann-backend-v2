@@ -11,6 +11,12 @@ interface Goal {
   description: string | null;
   is_active: boolean;
   created_at: string;
+  start_date: string | null;
+  expires_at: string | null;
+  recurrence_days: number | null;
+  recurrence_limit: number | null;
+  recurrence_count: number;
+  original_goal_id: number | null;
 }
 
 export default function GoalsPage() {
@@ -25,6 +31,10 @@ export default function GoalsPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [startDate, setStartDate] = useState('');
+  const [expiresAt, setExpiresAt] = useState('');
+  const [recurrenceDays, setRecurrenceDays] = useState('');
+  const [recurrenceLimit, setRecurrenceLimit] = useState('');
   const [creating, setCreating] = useState(false);
 
   // Edit form state
@@ -32,6 +42,10 @@ export default function GoalsPage() {
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editIsActive, setEditIsActive] = useState(true);
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editExpiresAt, setEditExpiresAt] = useState('');
+  const [editRecurrenceDays, setEditRecurrenceDays] = useState('');
+  const [editRecurrenceLimit, setEditRecurrenceLimit] = useState('');
   const [updating, setUpdating] = useState(false);
 
   // Delete state
@@ -67,6 +81,10 @@ export default function GoalsPage() {
       title: title.trim(),
       description: description.trim() || undefined,
       is_active: isActive,
+      start_date: startDate || undefined,
+      expires_at: expiresAt || undefined,
+      recurrence_days: recurrenceDays ? parseInt(recurrenceDays) : undefined,
+      recurrence_limit: recurrenceLimit ? parseInt(recurrenceLimit) : undefined,
     };
 
     console.log('Creating goal:', goalData);
@@ -79,6 +97,10 @@ export default function GoalsPage() {
       setTitle('');
       setDescription('');
       setIsActive(true);
+      setStartDate('');
+      setExpiresAt('');
+      setRecurrenceDays('');
+      setRecurrenceLimit('');
       setShowForm(false);
 
       // Show success message
@@ -103,6 +125,10 @@ export default function GoalsPage() {
     setEditTitle(goal.title);
     setEditDescription(goal.description || '');
     setEditIsActive(goal.is_active);
+    setEditStartDate(goal.start_date || '');
+    setEditExpiresAt(goal.expires_at || '');
+    setEditRecurrenceDays(goal.recurrence_days?.toString() || '');
+    setEditRecurrenceLimit(goal.recurrence_limit?.toString() || '');
     setError('');
     setSuccess('');
   };
@@ -119,6 +145,10 @@ export default function GoalsPage() {
       title: editTitle.trim(),
       description: editDescription.trim() || undefined,
       is_active: editIsActive,
+      start_date: editStartDate || undefined,
+      expires_at: editExpiresAt || undefined,
+      recurrence_days: editRecurrenceDays ? parseInt(editRecurrenceDays) : undefined,
+      recurrence_limit: editRecurrenceLimit ? parseInt(editRecurrenceLimit) : undefined,
     };
 
     try {
@@ -271,6 +301,80 @@ export default function GoalsPage() {
               </label>
             </div>
 
+            {/* Scheduling and Recurrence Section */}
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                Scheduling & Recurrence (Optional)
+              </h3>
+              <p className="text-xs text-gray-500 mb-4">
+                Set when this goal becomes available, when it expires, and whether it should recur automatically.
+              </p>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date (Available From)
+                  </label>
+                  <input
+                    id="startDate"
+                    type="datetime-local"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">When goal becomes visible to students</p>
+                </div>
+
+                <div>
+                  <label htmlFor="expiresAt" className="block text-sm font-medium text-gray-700 mb-1">
+                    Expires At (If Not Completed)
+                  </label>
+                  <input
+                    id="expiresAt"
+                    type="datetime-local"
+                    value={expiresAt}
+                    onChange={(e) => setExpiresAt(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">When goal disappears if incomplete</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="recurrenceDays" className="block text-sm font-medium text-gray-700 mb-1">
+                    Recurrence Days (Days to Reappear)
+                  </label>
+                  <input
+                    id="recurrenceDays"
+                    type="number"
+                    min="0"
+                    placeholder="e.g., 7 for weekly, 30 for monthly"
+                    value={recurrenceDays}
+                    onChange={(e) => setRecurrenceDays(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">How many days until goal reappears</p>
+                </div>
+
+                <div>
+                  <label htmlFor="recurrenceLimit" className="block text-sm font-medium text-gray-700 mb-1">
+                    Recurrence Limit (Max Times)
+                  </label>
+                  <input
+                    id="recurrenceLimit"
+                    type="number"
+                    min="0"
+                    placeholder="Leave empty for unlimited"
+                    value={recurrenceLimit}
+                    onChange={(e) => setRecurrenceLimit(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Maximum number of times to recur (blank = infinite)</p>
+                </div>
+              </div>
+            </div>
+
             <div className="flex gap-2">
               <button
                 type="submit"
@@ -286,6 +390,10 @@ export default function GoalsPage() {
                   setTitle('');
                   setDescription('');
                   setIsActive(true);
+                  setStartDate('');
+                  setExpiresAt('');
+                  setRecurrenceDays('');
+                  setRecurrenceLimit('');
                   setError('');
                 }}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
@@ -345,6 +453,80 @@ export default function GoalsPage() {
                   <label htmlFor="editIsActive" className="ml-2 text-sm text-gray-700">
                     Active (visible to students)
                   </label>
+                </div>
+
+                {/* Scheduling and Recurrence Section */}
+                <div className="border-t border-gray-200 pt-4">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                    Scheduling & Recurrence (Optional)
+                  </h3>
+                  <p className="text-xs text-gray-500 mb-4">
+                    Set when this goal becomes available, when it expires, and whether it should recur automatically.
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label htmlFor="editStartDate" className="block text-sm font-medium text-gray-700 mb-1">
+                        Start Date (Available From)
+                      </label>
+                      <input
+                        id="editStartDate"
+                        type="datetime-local"
+                        value={editStartDate}
+                        onChange={(e) => setEditStartDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">When goal becomes visible to students</p>
+                    </div>
+
+                    <div>
+                      <label htmlFor="editExpiresAt" className="block text-sm font-medium text-gray-700 mb-1">
+                        Expires At (If Not Completed)
+                      </label>
+                      <input
+                        id="editExpiresAt"
+                        type="datetime-local"
+                        value={editExpiresAt}
+                        onChange={(e) => setEditExpiresAt(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">When goal disappears if incomplete</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="editRecurrenceDays" className="block text-sm font-medium text-gray-700 mb-1">
+                        Recurrence Days (Days to Reappear)
+                      </label>
+                      <input
+                        id="editRecurrenceDays"
+                        type="number"
+                        min="0"
+                        placeholder="e.g., 7 for weekly, 30 for monthly"
+                        value={editRecurrenceDays}
+                        onChange={(e) => setEditRecurrenceDays(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">How many days until goal reappears</p>
+                    </div>
+
+                    <div>
+                      <label htmlFor="editRecurrenceLimit" className="block text-sm font-medium text-gray-700 mb-1">
+                        Recurrence Limit (Max Times)
+                      </label>
+                      <input
+                        id="editRecurrenceLimit"
+                        type="number"
+                        min="0"
+                        placeholder="Leave empty for unlimited"
+                        value={editRecurrenceLimit}
+                        onChange={(e) => setEditRecurrenceLimit(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Maximum number of times to recur (blank = infinite)</p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex gap-2 pt-4">
@@ -442,6 +624,33 @@ export default function GoalsPage() {
                       <span>ID: {goal.id}</span>
                       <span>Created: {new Date(goal.created_at).toLocaleDateString()}</span>
                     </div>
+
+                    {/* Scheduling Info */}
+                    {(goal.start_date || goal.expires_at || goal.recurrence_days) && (
+                      <div className="mt-2 pt-2 border-t border-gray-200">
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          {goal.start_date && (
+                            <span className="flex items-center gap-1">
+                              <span className="font-medium">Starts:</span>
+                              {new Date(goal.start_date).toLocaleString()}
+                            </span>
+                          )}
+                          {goal.expires_at && (
+                            <span className="flex items-center gap-1">
+                              <span className="font-medium">Expires:</span>
+                              {new Date(goal.expires_at).toLocaleString()}
+                            </span>
+                          )}
+                          {goal.recurrence_days && (
+                            <span className="flex items-center gap-1">
+                              <span className="font-medium">Recurs:</span>
+                              Every {goal.recurrence_days} day{goal.recurrence_days !== 1 ? 's' : ''}
+                              {goal.recurrence_limit && ` (max ${goal.recurrence_limit}x)`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="ml-4 flex gap-2">
                     <button
