@@ -3,15 +3,14 @@
 import { useState, useEffect } from 'react';
 import { studentApi } from '@/lib/api';
 import { formatApiError } from '@/lib/errors';
-import TodayObjectiveCard from '@/components/TodayObjectiveCard';
-import ObjectiveProgressTrack from '@/components/ObjectiveProgressTrack';
-import NextStepsPanel from '@/components/NextStepsPanel';
 import StudentLevelCard from '@/components/StudentLevelCard';
 import AchievementsCard from '@/components/AchievementsCard';
 import SnapshotCard from '@/components/SnapshotCard';
 
-interface Objective {
+interface Task {
   id: number;
+  goal_id: number;
+  goal_title: string;
   title: string;
   description: string | null;
   points: number;
@@ -19,33 +18,29 @@ interface Objective {
   is_required: boolean;
   is_completed: boolean;
   completed_at: string | null;
+  snoozed_until: string | null;
 }
 
-interface CurrentGoal {
-  id: number;
-  title: string;
-  description: string | null;
-  status: string;
+interface GoalProgress {
+  goal_id: number;
+  goal_title: string;
+  total: number;
+  completed: number;
+  percentage: number;
 }
 
-interface TodayData {
-  current_goal: CurrentGoal | null;
-  current_objective: Objective | null;
-  next_objective: Objective | null;
-  all_objectives: Objective[];
-  progress: {
-    total: number;
-    completed: number;
-    percentage: number;
-  };
-  second_slot_enabled: boolean;
+interface TodayTaskData {
+  task: Task | null;
+  goal_progress: GoalProgress | null;
+  available_count: number;
 }
 
 export default function StudentDashboard() {
-  const [todayData, setTodayData] = useState<TodayData | null>(null);
+  const [primaryTask, setPrimaryTask] = useState<TodayTaskData | null>(null);
+  const [secondaryTask, setSecondaryTask] = useState<TodayTaskData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [secondSlotEnabled, setSecondSlotEnabled] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     loadTodayTask();
@@ -54,8 +49,7 @@ export default function StudentDashboard() {
   const loadTodayTask = async () => {
     try {
       const data = await studentApi.getTodayTask();
-      setTodayData(data);
-      setSecondSlotEnabled(data.second_slot_enabled);
+      setPrimaryTask(data);
       setError('');
     } catch (err) {
       setError(formatApiError(err));
@@ -64,19 +58,81 @@ export default function StudentDashboard() {
     }
   };
 
-  const handleMarkDone = async (objectiveId: number) => {
+  const handleMarkDone = async (taskId: number) => {
     try {
-      await studentApi.completeGoalStep(objectiveId);
-      // Reload data to get next objective
+      setActionLoading(true);
+      setError('');
+
+      await studentApi.completeTask(taskId);
+
+      // Reload primary task
       await loadTodayTask();
+
+      // Clear secondary task if it was the one completed
+      if (secondaryTask?.task?.id === taskId) {
+        setSecondaryTask(null);
+      }
     } catch (err) {
       setError(formatApiError(err));
-      throw err; // Re-throw to let component handle it
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const handleAddAnotherTask = () => {
-    setSecondSlotEnabled(true);
+  const handleSnooze = async (taskId: number) => {
+    try {
+      setActionLoading(true);
+      setError('');
+
+      await studentApi.snoozeTask(taskId, 1);
+
+      // Reload to get next available task
+      await loadTodayTask();
+
+      // Clear secondary task if it was the one snoozed
+      if (secondaryTask?.task?.id === taskId) {
+        setSecondaryTask(null);
+      }
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSwap = async (taskId: number) => {
+    try {
+      setActionLoading(true);
+      setError('');
+
+      const swapped = await studentApi.swapTask(taskId);
+
+      // Update primary task with swapped task
+      setPrimaryTask(swapped);
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAddAnotherTask = async () => {
+    try {
+      setActionLoading(true);
+      setError('');
+
+      const anotherTask = await studentApi.addAnotherTask();
+
+      if (anotherTask.task) {
+        setSecondaryTask(anotherTask);
+      } else {
+        setError('No additional tasks available');
+      }
+    } catch (err) {
+      setError(formatApiError(err));
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   if (loading) {
@@ -87,7 +143,7 @@ export default function StudentDashboard() {
     );
   }
 
-  if (error && !todayData) {
+  if (error && !primaryTask) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 px-4">
         <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg max-w-md whitespace-pre-wrap">
@@ -97,37 +153,15 @@ export default function StudentDashboard() {
     );
   }
 
-  if (!todayData) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 px-4">
-        <div className="glass-card p-12 text-center max-w-md">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Something went wrong
-          </h2>
-          <p className="text-gray-600">
-            Unable to load your tasks. Please try refreshing the page.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  const task = primaryTask?.task;
+  const goalProgress = primaryTask?.goal_progress;
+  const availableCount = primaryTask?.available_count || 0;
 
-  const { current_goal, current_objective, next_objective, all_objectives, progress } = todayData;
+  // Calculate total points (placeholder)
+  const totalPoints = goalProgress ? goalProgress.completed * 10 : 0;
 
-  // Calculate total points from completed objectives
-  const totalPoints = all_objectives
-    .filter(obj => obj.is_completed)
-    .reduce((sum, obj) => sum + obj.points, 0);
-
-  // Calculate completed today (simple placeholder)
-  const completedToday = all_objectives.filter(obj => {
-    if (!obj.completed_at) return false;
-    const completedDate = new Date(obj.completed_at);
-    const today = new Date();
-    return completedDate.toDateString() === today.toDateString();
-  }).length;
-
-  // Placeholder streak
+  // Placeholder values
+  const completedToday = 0;
   const streak = 1;
 
   return (
@@ -143,11 +177,13 @@ export default function StudentDashboard() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            {current_goal ? current_goal.title : 'Your Learning Journey'}
+            {goalProgress ? goalProgress.goal_title : 'Your Learning Journey'}
           </h1>
-          {current_goal?.description && (
-            <p className="text-gray-600 text-lg">{current_goal.description}</p>
-          )}
+          <p className="text-gray-600 text-lg">
+            {goalProgress
+              ? `${goalProgress.completed} of ${goalProgress.total} tasks completed (${goalProgress.percentage}%)`
+              : 'No active goals yet'}
+          </p>
         </div>
 
         {/* Error Display */}
@@ -163,34 +199,174 @@ export default function StudentDashboard() {
         {/* 2. Achievements Card */}
         <AchievementsCard />
 
-        {/* 3. Next Steps Panel (Notifications - only shows if there are notifications) */}
-        <NextStepsPanel />
+        {/* 3. Today's Task Card */}
+        {task ? (
+          <div className="glass-card p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Today's Task</h2>
 
-        {/* 4. Progress Track */}
-        {current_goal && all_objectives.length > 0 && (
-          <ObjectiveProgressTrack
-            goalTitle={current_goal.title}
-            objectives={all_objectives}
-            currentObjectiveId={current_objective?.id || null}
-          />
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-600">
+                  {availableCount} task{availableCount !== 1 ? 's' : ''} available
+                </span>
+
+                {!secondaryTask && availableCount > 1 && (
+                  <button
+                    onClick={handleAddAnotherTask}
+                    disabled={actionLoading}
+                    className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 border border-blue-300 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50"
+                  >
+                    + Add another task
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Primary Task */}
+            <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-sm hover:shadow-md transition-shadow mb-4">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-3">
+                <span className="px-3 py-1 bg-gradient-to-r from-purple-400 to-pink-400 text-white text-xs font-bold rounded-full shadow-sm">
+                  Task {task.sort_order + 1}
+                </span>
+                <div className="flex items-center gap-1 text-yellow-500">
+                  <span className="text-sm font-bold">{task.points}</span>
+                  <span className="text-xs">pts</span>
+                </div>
+              </div>
+
+              {/* Title */}
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                {task.title}
+              </h3>
+
+              {/* Description */}
+              {task.description && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                  <div className="text-sm text-blue-900">
+                    {task.description}
+                  </div>
+                </div>
+              )}
+
+              {/* Goal info */}
+              <div className="text-xs text-gray-500 mb-4">
+                Part of: <span className="font-medium text-gray-700">{task.goal_title}</span>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleMarkDone(task.id)}
+                  disabled={actionLoading}
+                  className="flex-1 min-w-[120px] px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-bold rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-sm disabled:opacity-50"
+                >
+                  Mark done ✓
+                </button>
+
+                <button
+                  onClick={() => handleSwap(task.id)}
+                  disabled={actionLoading}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Swap
+                </button>
+
+                <button
+                  onClick={() => handleSnooze(task.id)}
+                  disabled={actionLoading}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Not today
+                </button>
+              </div>
+            </div>
+
+            {/* Progress bar for goal */}
+            {goalProgress && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
+                  <span>Goal Progress</span>
+                  <span>{goalProgress.percentage}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${goalProgress.percentage}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="glass-card p-12 text-center">
+            <div className="text-6xl mb-4">🎉</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              All caught up!
+            </h2>
+            <p className="text-gray-600">
+              No tasks available right now. Great work!
+            </p>
+          </div>
         )}
 
-        {/* 5. Today's Task (Main Feature) */}
-        {current_goal && (
-          <TodayObjectiveCard
-            goalTitle={current_goal.title}
-            goalDescription={current_goal.description}
-            currentObjective={current_objective}
-            nextObjective={next_objective}
-            allObjectives={all_objectives}
-            progress={progress}
-            secondSlotEnabled={secondSlotEnabled}
-            onMarkDone={handleMarkDone}
-            onAddAnotherTask={handleAddAnotherTask}
-          />
+        {/* Secondary Task (if added) */}
+        {secondaryTask?.task && (
+          <div className="glass-card p-6">
+            <div className="mb-3">
+              <h3 className="text-lg font-bold text-gray-800">Bonus Task</h3>
+              <p className="text-xs text-gray-500">Optional task for extra points</p>
+            </div>
+
+            <div className="border border-gray-200 rounded-xl p-5 bg-white shadow-sm">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-3">
+                <span className="px-3 py-1 bg-gradient-to-r from-blue-400 to-cyan-400 text-white text-xs font-bold rounded-full shadow-sm">
+                  Bonus
+                </span>
+                <div className="flex items-center gap-1 text-yellow-500">
+                  <span className="text-sm font-bold">{secondaryTask.task.points}</span>
+                  <span className="text-xs">pts</span>
+                </div>
+              </div>
+
+              {/* Title */}
+              <h3 className="text-lg font-bold text-gray-900 mb-2">
+                {secondaryTask.task.title}
+              </h3>
+
+              {/* Description */}
+              {secondaryTask.task.description && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                  <div className="text-sm text-blue-900">
+                    {secondaryTask.task.description}
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleMarkDone(secondaryTask.task!.id)}
+                  disabled={actionLoading}
+                  className="flex-1 min-w-[120px] px-4 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-bold rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-sm disabled:opacity-50"
+                >
+                  Mark done ✓
+                </button>
+
+                <button
+                  onClick={() => setSecondaryTask(null)}
+                  disabled={actionLoading}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
-        {/* 6. Snapshot Card */}
+        {/* 4. Snapshot Card */}
         <SnapshotCard
           completedToday={completedToday}
           totalPoints={totalPoints}
