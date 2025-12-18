@@ -17,43 +17,47 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create enum type if it doesn't exist
     conn = op.get_bind()
 
-    # Check if enum exists first to avoid transaction abort
+    # Check if enum exists, create if not
     enum_exists = conn.execute(sa.text(
         "SELECT 1 FROM pg_type WHERE typname = 'notificationtype'"
     )).fetchone()
 
     if not enum_exists:
-        # Create enum using raw SQL
         conn.execute(sa.text(
             "CREATE TYPE notificationtype AS ENUM ('deadline', 'nudge', 'streak')"
         ))
-        conn.commit()
 
-    # Check if notifications table already exists
+    # Check if table exists, create if not
     table_exists = conn.execute(sa.text(
         "SELECT 1 FROM information_schema.tables WHERE table_name = 'notifications'"
     )).fetchone()
 
     if not table_exists:
-        # Create notifications table
-        op.create_table(
-            'notifications',
-            sa.Column('id', sa.Integer(), primary_key=True, index=True),
-            sa.Column('user_id', sa.Integer(), sa.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True),
-            sa.Column('type', sa.Enum('deadline', 'nudge', 'streak', name='notificationtype', create_type=False), nullable=False),
-            sa.Column('title', sa.String(), nullable=False),
-            sa.Column('body', sa.Text(), nullable=False),
-            sa.Column('related_goal_id', sa.Integer(), sa.ForeignKey('goals.id', ondelete='CASCADE'), nullable=True),
-            sa.Column('related_challenge_id', sa.Integer(), sa.ForeignKey('challenges.id', ondelete='CASCADE'), nullable=True),
-            sa.Column('scheduled_for', sa.DateTime(), nullable=False, index=True, comment='When notification should be shown'),
-            sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP')),
-            sa.Column('read_at', sa.DateTime(), nullable=True, comment='When user read the notification'),
-            sa.Column('dismissed_at', sa.DateTime(), nullable=True, comment='When user dismissed the notification'),
-            sa.Column('dedup_key', sa.String(), nullable=True, index=True, comment='Unique key for deduplication'),
-        )
+        # Create table using raw SQL to completely bypass SQLAlchemy's event system
+        conn.execute(sa.text("""
+            CREATE TABLE notifications (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                type notificationtype NOT NULL,
+                title VARCHAR NOT NULL,
+                body TEXT NOT NULL,
+                related_goal_id INTEGER REFERENCES goals(id) ON DELETE CASCADE,
+                related_challenge_id INTEGER REFERENCES challenges(id) ON DELETE CASCADE,
+                scheduled_for TIMESTAMP NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                read_at TIMESTAMP,
+                dismissed_at TIMESTAMP,
+                dedup_key VARCHAR
+            )
+        """))
+
+        # Create indexes separately
+        conn.execute(sa.text("CREATE INDEX ix_notifications_id ON notifications(id)"))
+        conn.execute(sa.text("CREATE INDEX ix_notifications_user_id ON notifications(user_id)"))
+        conn.execute(sa.text("CREATE INDEX ix_notifications_scheduled_for ON notifications(scheduled_for)"))
+        conn.execute(sa.text("CREATE INDEX ix_notifications_dedup_key ON notifications(dedup_key)"))
 
 
 def downgrade() -> None:
