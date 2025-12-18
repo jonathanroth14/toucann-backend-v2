@@ -17,9 +17,9 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create notification type enum
+    # Create notification type enum (with checkfirst to avoid duplicate error)
     notification_type = sa.Enum('deadline', 'nudge', 'streak', name='notificationtype')
-    notification_type.create(op.get_bind())
+    notification_type.create(op.get_bind(), checkfirst=True)
 
     # Create notifications table
     op.create_table(
