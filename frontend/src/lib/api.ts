@@ -279,14 +279,10 @@ export const adminApi = {
 export const studentApi = {
   async getTodayTask() {
     return apiFetch<{
-      current_goal: {
+      task: {
         id: number;
-        title: string;
-        description: string | null;
-        status: string;
-      } | null;
-      current_objective: {
-        id: number;
+        goal_id: number;
+        goal_title: string;
         title: string;
         description: string | null;
         points: number;
@@ -294,38 +290,103 @@ export const studentApi = {
         is_required: boolean;
         is_completed: boolean;
         completed_at: string | null;
+        snoozed_until: string | null;
       } | null;
-      next_objective: {
-        id: number;
-        title: string;
-        description: string | null;
-        points: number;
-        sort_order: number;
-        is_required: boolean;
-        is_completed: boolean;
-        completed_at: string | null;
-      } | null;
-      all_objectives: Array<{
-        id: number;
-        title: string;
-        description: string | null;
-        points: number;
-        sort_order: number;
-        is_required: boolean;
-        is_completed: boolean;
-        completed_at: string | null;
-      }>;
-      progress: {
+      goal_progress: {
+        goal_id: number;
+        goal_title: string;
         total: number;
         completed: number;
         percentage: number;
-      };
-      second_slot_enabled: boolean;
-    }>('/student/today', {
+      } | null;
+      available_count: number;
+    }>('/student/today-task', {
       requiresAuth: true,
     });
   },
 
+  async completeTask(taskId: number) {
+    return apiFetch<{
+      ok: boolean;
+      message: string;
+      points_awarded: number;
+      goal_complete: boolean;
+    }>(`/student/today-task/${taskId}/complete`, {
+      method: 'POST',
+      requiresAuth: true,
+    });
+  },
+
+  async snoozeTask(taskId: number, days: number = 1) {
+    return apiFetch<{
+      ok: boolean;
+      message: string;
+      snoozed_until: string;
+    }>(`/student/today-task/${taskId}/snooze?days=${days}`, {
+      method: 'POST',
+      requiresAuth: true,
+    });
+  },
+
+  async swapTask(currentTaskId: number) {
+    return apiFetch<{
+      task: {
+        id: number;
+        goal_id: number;
+        goal_title: string;
+        title: string;
+        description: string | null;
+        points: number;
+        sort_order: number;
+        is_required: boolean;
+        is_completed: boolean;
+        completed_at: string | null;
+        snoozed_until: string | null;
+      } | null;
+      goal_progress: {
+        goal_id: number;
+        goal_title: string;
+        total: number;
+        completed: number;
+        percentage: number;
+      } | null;
+      available_count: number;
+    }>(`/student/today-task/swap?current_task_id=${currentTaskId}`, {
+      method: 'POST',
+      requiresAuth: true,
+    });
+  },
+
+  async addAnotherTask() {
+    return apiFetch<{
+      task: {
+        id: number;
+        goal_id: number;
+        goal_title: string;
+        title: string;
+        description: string | null;
+        points: number;
+        sort_order: number;
+        is_required: boolean;
+        is_completed: boolean;
+        completed_at: string | null;
+        snoozed_until: string | null;
+      } | null;
+      goal_progress: {
+        goal_id: number;
+        goal_title: string;
+        total: number;
+        completed: number;
+        percentage: number;
+      } | null;
+      available_count: number;
+    }>('/student/today-task/add-another', {
+      method: 'POST',
+      requiresAuth: true,
+    });
+  },
+
+  // Legacy endpoints (kept for backward compatibility)
   async addSecondSlot() {
     return apiFetch<{
       ok: boolean;
