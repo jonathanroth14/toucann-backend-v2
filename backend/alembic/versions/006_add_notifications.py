@@ -7,7 +7,6 @@ Create Date: 2025-01-17
 """
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.exc import ProgrammingError
 
 
 # revision identifiers, used by Alembic.
@@ -19,20 +18,26 @@ depends_on = None
 
 def upgrade() -> None:
     # Create enum type if it doesn't exist
-    # Wrap in try-except to handle case where it already exists
     conn = op.get_bind()
-    try:
+
+    # Check if enum exists first to avoid transaction abort
+    enum_exists = conn.execute(sa.text(
+        "SELECT 1 FROM pg_type WHERE typname = 'notificationtype'"
+    )).fetchone()
+
+    if not enum_exists:
+        # Create enum using raw SQL
         conn.execute(sa.text(
             "CREATE TYPE notificationtype AS ENUM ('deadline', 'nudge', 'streak')"
         ))
-    except ProgrammingError as e:
-        # Ignore error if type already exists
-        if 'already exists' not in str(e):
-            raise
+        conn.commit()
 
     # Check if notifications table already exists
-    inspector = sa.inspect(conn)
-    if 'notifications' not in inspector.get_table_names():
+    table_exists = conn.execute(sa.text(
+        "SELECT 1 FROM information_schema.tables WHERE table_name = 'notifications'"
+    )).fetchone()
+
+    if not table_exists:
         # Create notifications table
         op.create_table(
             'notifications',
