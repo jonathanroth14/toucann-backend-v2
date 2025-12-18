@@ -283,57 +283,37 @@ export const studentApi = {
         id: number;
         title: string;
         description: string | null;
+        status: string;
       } | null;
-      primary_challenge: {
+      current_objective: {
         id: number;
         title: string;
         description: string | null;
-        points: number;
-        category: string | null;
-        due_date: string | null;
-        objectives: Array<{
-          id: number;
-          title: string;
-          description: string | null;
-          points: number;
-          sort_order: number;
-          is_required: boolean;
-          status: string;
-          completed_at: string | null;
-        }>;
-        has_next: boolean;
-      } | null;
-      secondary_challenge: {
-        id: number;
-        title: string;
-        description: string | null;
-        points: number;
-        category: string | null;
-        due_date: string | null;
-        objectives: Array<{
-          id: number;
-          title: string;
-          description: string | null;
-          points: number;
-          sort_order: number;
-          is_required: boolean;
-          status: string;
-          completed_at: string | null;
-        }>;
-      } | null;
-      challenge_chain: Array<{
-        id: number;
-        title: string;
-        points: number;
-        category: string | null;
-      }>;
-      all_challenges: Array<{
-        id: number;
-        title: string;
         points: number;
         sort_order: number;
-        status: string;
-        is_current: boolean;
+        is_required: boolean;
+        is_completed: boolean;
+        completed_at: string | null;
+      } | null;
+      next_objective: {
+        id: number;
+        title: string;
+        description: string | null;
+        points: number;
+        sort_order: number;
+        is_required: boolean;
+        is_completed: boolean;
+        completed_at: string | null;
+      } | null;
+      all_objectives: Array<{
+        id: number;
+        title: string;
+        description: string | null;
+        points: number;
+        sort_order: number;
+        is_required: boolean;
+        is_completed: boolean;
+        completed_at: string | null;
       }>;
       progress: {
         total: number;
