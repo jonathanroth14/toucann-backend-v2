@@ -147,3 +147,20 @@ class UserGoalStepProgress(Base):
 
     def __repr__(self):
         return f"<UserGoalStepProgress(user_id={self.user_id}, step_id={self.step_id}, status={self.status})>"
+
+
+class SnoozedGoalTask(Base):
+    """Tracks snoozed goal tasks"""
+
+    __tablename__ = "snoozed_goal_tasks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    step_id = Column(Integer, ForeignKey("goal_steps.id", ondelete="CASCADE"), nullable=False)
+    snoozed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    snoozed_until = Column(DateTime, nullable=False, comment="When task becomes available again")
+
+    __table_args__ = (UniqueConstraint("user_id", "step_id", name="uq_user_snoozed_task"),)
+
+    def __repr__(self):
+        return f"<SnoozedGoalTask(user_id={self.user_id}, step_id={self.step_id})>"

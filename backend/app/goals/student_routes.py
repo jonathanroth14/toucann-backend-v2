@@ -1,11 +1,11 @@
 """
 Goal Student Routes
-Student-facing endpoints for goals and steps
+Student-facing endpoints for goals and tasks
 """
-from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import datetime, timedelta
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 
 from app.common.dependencies import get_db
 from app.auth.models import User
@@ -24,10 +24,11 @@ from typing import Optional
 from pydantic import BaseModel
 
 
-# New schema for Today's Task response
-class ObjectiveDetail(BaseModel):
-    """Detailed objective info for today's task"""
+# Schema for Today's Task response
+class TaskDetail(BaseModel):
+    """Detailed task info for today's task"""
     id: int
+    goal_id: int
     title: str
     description: Optional[str]
     points: int
@@ -35,19 +36,27 @@ class ObjectiveDetail(BaseModel):
     is_required: bool
     is_completed: bool
     completed_at: Optional[datetime]
+    snoozed_until: Optional[datetime] = None
 
     class Config:
         from_attributes = True
 
 
 class TodayTaskResponse(BaseModel):
-    """Response for /student/today endpoint"""
+    """Response for /student/today-task endpoint"""
     current_goal: Optional[dict]
-    current_objective: Optional[ObjectiveDetail]
-    next_objective: Optional[ObjectiveDetail]
-    all_objectives: list[ObjectiveDetail]
+    current_task: Optional[TaskDetail]
+    next_task: Optional[TaskDetail]
+    all_tasks: list[TaskDetail]
     progress: dict
-    second_slot_enabled: bool
+    available_goals: list[dict]
+
+
+# Model for snoozed tasks
+class SnoozedTask(BaseModel):
+    user_id: int
+    task_id: int
+    snoozed_until: datetime
 
 
 router = APIRouter()
