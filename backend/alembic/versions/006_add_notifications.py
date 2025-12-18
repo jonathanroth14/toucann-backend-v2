@@ -17,16 +17,23 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create notification type enum (with checkfirst to avoid duplicate error)
-    notification_type = sa.Enum('deadline', 'nudge', 'streak', name='notificationtype')
-    notification_type.create(op.get_bind(), checkfirst=True)
+    # Check if enum type already exists, create only if it doesn't
+    conn = op.get_bind()
+    result = conn.execute(sa.text(
+        "SELECT 1 FROM pg_type WHERE typname = 'notificationtype'"
+    )).fetchone()
 
-    # Create notifications table
+    if not result:
+        # Enum doesn't exist, create it
+        notification_type = sa.Enum('deadline', 'nudge', 'streak', name='notificationtype')
+        notification_type.create(conn)
+
+    # Create notifications table (reference enum by name)
     op.create_table(
         'notifications',
         sa.Column('id', sa.Integer(), primary_key=True, index=True),
         sa.Column('user_id', sa.Integer(), sa.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True),
-        sa.Column('type', notification_type, nullable=False),
+        sa.Column('type', sa.Enum('deadline', 'nudge', 'streak', name='notificationtype', create_type=False), nullable=False),
         sa.Column('title', sa.String(), nullable=False),
         sa.Column('body', sa.Text(), nullable=False),
         sa.Column('related_goal_id', sa.Integer(), sa.ForeignKey('goals.id', ondelete='CASCADE'), nullable=True),
